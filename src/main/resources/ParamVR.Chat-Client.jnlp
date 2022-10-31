@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp spec="7.0+" codebase="https://paramvr.chat/client/" href="ParamVR.Chat-Client.jnlp" version="0.1">
+    <information>
+        <title>ParamVR.Chat-Client</title>
+        <vendor>ParamVR.Chat</vendor>
+        <homepage href="https://paramvr.chat/" />
+        <icon href="https://paramvr.chat/favicon.ico" />
+    </information>
+    <security>
+        <all-permissions />
+    </security>
+    <resources>
+        <java version="1.8+" />
+
+        <jar href="lib/vrcparameters-client-0.1.jar" main="true" />
+        <jar href="lib/annotations-13.0.jar" />
+        <jar href="lib/gson-2.9.0.jar" />
+        <jar href="lib/javaosc-core-0.8.jar" />
+        <jar href="lib/kotlin-reflect-1.6.21.jar" />
+        <jar href="lib/kotlin-stdlib-1.6.21.jar" />
+        <jar href="lib/kotlin-stdlib-common-1.6.21.jar" />
+        <jar href="lib/kotlin-stdlib-jdk7-1.6.21.jar" />
+        <jar href="lib/kotlin-stdlib-jdk8-1.6.21.jar" />
+        <jar href="lib/kotlinx-coroutines-core-jvm-1.6.1.jar" />
+        <jar href="lib/kotlinx-coroutines-jdk8-1.6.1.jar" />
+        <jar href="lib/kotlinx-coroutines-slf4j-1.6.1.jar" />
+        <jar href="lib/ktor-client-cio-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-client-core-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-client-okhttp-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-client-websockets-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-events-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-http-cio-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-http-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-io-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-network-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-network-tls-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-serialization-gson-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-serialization-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-utils-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-websocket-serialization-jvm-2.0.2.jar" />
+        <jar href="lib/ktor-websockets-jvm-2.0.2.jar" />
+        <jar href="lib/log4j-1.2.17.jar" />
+        <jar href="lib/okhttp-4.9.3.jar" />
+        <jar href="lib/okio-jvm-2.8.0.jar" />
+        <jar href="lib/slf4j-api-1.7.36.jar" />
+        <jar href="lib/slf4j-ext-1.7.25.jar" />
+        <jar href="lib/slf4j-log4j12-1.7.25.jar" />
+
+    </resources>
+    <application-desc name="ParamVR.Chat-Client" main-class="chat.paramvr.VrcParametersClient">
+    </application-desc>
+    <update check="always" policy="always" />
+</jnlp>

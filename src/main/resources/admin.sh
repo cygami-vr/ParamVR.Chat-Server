@@ -1,0 +1,1 @@
+java -cp *.jar chat.paramvr.admin.Admin "$@"
