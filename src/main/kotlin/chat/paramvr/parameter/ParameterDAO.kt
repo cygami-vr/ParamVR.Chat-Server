@@ -39,8 +39,9 @@ class ParameterDAO : DAO() {
         val parameters = mutableListOf<chat.paramvr.ws.listen.Parameter>()
         connect().use { c ->
             c.prepareStatement(
-                "select parameter.id, type, description, parameter.name, `key`, data_type, default_value, min_value, max_value" +
-                        " from parameter left join avatar on avatar.id = avatar_id where parameter.user_id = ? and (vrc_uuid = ? or vrc_uuid is null)"
+                "select parameter.id, type, description, parameter.name, `key`, data_type, default_value, min_value, max_value, saved" +
+                        " from parameter left join avatar on avatar.id = avatar_id" +
+                        " where parameter.user_id = ? and (vrc_uuid = ? or vrc_uuid is null) order by `order`"
             ).use {
                 it.setLong(1, userId)
                 it.setString(2, avatarVrcUuid)
@@ -55,9 +56,10 @@ class ParameterDAO : DAO() {
                     val minValue = rs.getString(8)
                     val maxValue = rs.getString(9)
                     val parameterId = rs.getLong(1)
+                    val saved = rs.getString(10)
 
                     val param = chat.paramvr.ws.listen.Parameter(desc, name, key, type, dataType,
-                        defaultValue, minValue, maxValue, parameterId)
+                        defaultValue, minValue, maxValue, saved, parameterId)
                     parameters += param
                 }
             }
@@ -73,8 +75,8 @@ class ParameterDAO : DAO() {
         val parameters = mutableListOf<GetParameter>()
         connect().use { c ->
             c.prepareStatement(
-                "select parameter.id, vrc_uuid, avatar.name, type, description, parameter.name, `key`, data_type, default_value, min_value, max_value" +
-                    " from parameter left join avatar on avatar.id = avatar_id where parameter.user_id = ?"
+                "select parameter.id, vrc_uuid, avatar.name, type, description, parameter.name, `key`, data_type, default_value, min_value, max_value, saved" +
+                    " from parameter left join avatar on avatar.id = avatar_id where parameter.user_id = ? order by `order`"
             ).use {
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
@@ -91,9 +93,10 @@ class ParameterDAO : DAO() {
                     val vrcUuid = rs.getString(2)
                     val avatarName = rs.getString(3)
                     val parameterId = rs.getLong(1)
+                    val saved = rs.getString(12)
 
                     val param = GetParameter(desc, name, key, type, dataType,
-                        defaultValue, minValue, maxValue, vrcUuid, avatarName, parameterId)
+                        defaultValue, minValue, maxValue, saved, vrcUuid, avatarName, parameterId)
                     parameters += param
                 }
             }
@@ -175,8 +178,8 @@ class ParameterDAO : DAO() {
     fun insertParameter(userId: Long, param: PostParameter) {
         connect().use { c ->
             c.prepareStatement(
-                "insert into parameter(user_id, avatar_id, type, description, name, `key`, data_type, default_value, min_value, max_value)" +
-                        " values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "insert into parameter(user_id, avatar_id, type, description, name, `key`, data_type, default_value, min_value, max_value, saved, `order`)" +
+                        " values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             ).use {
 
                 it.setLong(1, userId)
@@ -193,6 +196,8 @@ class ParameterDAO : DAO() {
                 it.setString(8, param.defaultValue)
                 it.setString(9, param.minValue)
                 it.setString(10, param.maxValue)
+                it.setString(11, param.saved ?: "Y")
+                it.setInt(12, param.order ?: 0)
                 it.executeUpdate()
             }
         }
@@ -201,7 +206,7 @@ class ParameterDAO : DAO() {
     fun updateParameter(userId: Long, param: PostParameter) {
         connect().use { c ->
             c.prepareStatement(
-                "update parameter set type = ?, description = ?, `key` = ?, data_type = ?, default_value = ?, min_value = ?, max_value = ?" +
+                "update parameter set type = ?, description = ?, `key` = ?, data_type = ?, default_value = ?, min_value = ?, max_value = ?, saved = ?, `order` = ?" +
                         " where user_id = ? and id = ?"
             ).use {
 
@@ -212,8 +217,10 @@ class ParameterDAO : DAO() {
                 it.setString(5, param.defaultValue)
                 it.setString(6, param.minValue)
                 it.setString(7, param.maxValue)
-                it.setLong(8, userId)
-                it.setLong(9, param.parameterId!!)
+                it.setString(8, param.saved ?: "Y")
+                it.setInt(9, param.order ?: 0)
+                it.setLong(10, userId)
+                it.setLong(11, param.parameterId!!)
                 it.executeUpdate()
             }
         }
@@ -255,6 +262,22 @@ class ParameterDAO : DAO() {
                 it.setLong(1, parameterId)
                 it.setString(2, value)
                 return it.executeUpdate() > 0
+            }
+        }
+    }
+
+    fun updateParameterOrder(userId: Long, parameterIds: List<Long>) {
+        connect().use { c ->
+            c.prepareStatement("update parameter set `order` = ? where user_id = ? and id = ?").use {
+                var order = 0
+                parameterIds.forEach { id ->
+                    it.setInt(1, order)
+                    it.setLong(2, userId)
+                    it.setLong(3, id)
+                    it.addBatch()
+                    order++
+                }
+                it.executeBatch()
             }
         }
     }

@@ -78,12 +78,16 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
             status.addProperty("muted", listener.muted)
             status.addProperty("isPancake", listener.isPancake)
             status.addProperty("afk", listener.afk)
-            status.addProperty("isPancake", listener.isPancake)
             status.addProperty("active", listener.isActive())
             status.addProperty("vrcOpen", listener.vrcOpen)
 
             sendSerialized(obj)
+        }
+        sendMutatedParams()
+    }
 
+    suspend fun sendMutatedParams() {
+        listener("send listener params")?.let { listener ->
             listener.getParams().forEach {
 
                 val value = listener.mutatedParams[it.name]

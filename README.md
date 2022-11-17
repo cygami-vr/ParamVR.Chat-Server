@@ -43,6 +43,8 @@ create table parameter(
     default_value varchar(16),
     min_value varchar(16),
     max_value varchar(16),
+    saved char(1) default 'Y' not null,
+    `order` tinyint,
     unique key (user_id, avatar_id, name),
     foreign key (user_id) references user(id) on delete cascade,
     foreign key (avatar_id) references avatar(id) on delete restrict

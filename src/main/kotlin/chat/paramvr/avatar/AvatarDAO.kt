@@ -56,6 +56,18 @@ class AvatarDAO: DAO() {
         }
     }
 
+    fun updateAvatar(userId: Long, avatar: PostAvatar) {
+        connect().use { c ->
+            c.prepareStatement("update avatar set vrc_uuid = ?, name = ? where id = ? and user_id = ?").use {
+                it.setString(1, avatar.vrcUuid)
+                it.setString(2, avatar.name)
+                it.setLong(3, avatar.id!!)
+                it.setLong(4, userId)
+                it.executeUpdate()
+            }
+        }
+    }
+
     fun deleteAvatar(userId: Long, id: Long): Boolean {
         connect().use { c ->
             c.prepareStatement("delete from avatar where id = ? and user_id = ?").use {

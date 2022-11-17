@@ -10,11 +10,7 @@ data class ParameterValue(val description: String?, val value: String, val key: 
 
 fun ParameterValue.matches(keys: List<String>) = key.isNullOrEmpty() || keys.contains(key)
 
-class GetParameter(
-    private val description: String?, val name: String, private val key: String?, val type: Short, val dataType: Short,
-    private val defaultValue: String?, private val minValue: String?, private val maxValue: String?,
-    var avatarVrcUuid: String?, var avatarName: String?,
-    var parameterId: Long? = null, var values: List<ParameterValue>? = null) {
+open class ParameterWithImage(var parameterId: Long? = null) {
 
     // Appears to be unused but is actually marshaled to JSON for the client-side.
     var image = parameterId?.let { getHref(it) }
@@ -40,4 +36,11 @@ class GetParameter(
             return if (prod) "/f/parameter/$path" else "http://localhost:8093/f/parameter/$path"
         }
     }
+}
+
+class GetParameter (
+    private val description: String?, val name: String, private val key: String?, val type: Short, val dataType: Short,
+    private val defaultValue: String?, private val minValue: String?, private val maxValue: String?, private val saved: String,
+    var avatarVrcUuid: String?, var avatarName: String?,
+    parameterId: Long? = null, var values: List<ParameterValue>? = null): ParameterWithImage(parameterId) {
 }

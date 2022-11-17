@@ -1,5 +1,6 @@
 package chat.paramvr.parameter
 
+import chat.paramvr.*
 import chat.paramvr.auth.userId
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -19,88 +20,84 @@ private val dao = ParameterDAO()
 fun Route.manageParameterRoutes() {
     route("parameter") {
         route("listen-key") {
-            post {
+            tryPost {
+                log("") // This is intentional, it is just to get the default logged info
                 val key = UUID.randomUUID().toString()
                 dao.updateListenKey(userId(), key)
                 call.respond(key)
             }
         }
-        post {
+        tryPost {
             val param = call.receive<PostParameter>()
+            log("avatarId=${param.avatarId} parameterId=${param.parameterId} name=${param.name}")
             if (param.parameterId == null) {
                 dao.insertParameter(userId(), param)
             } else {
                 dao.updateParameter(userId(), param)
             }
-            getListener(vrcParametersSession().userName)?.avatarParams = null
+            clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)
         }
-        get {
+        tryGet {
             val params = dao.retrieveParameters(userId())
             call.respond(params)
         }
-        delete {
+        tryDelete {
             val body = call.receive<DeleteParameter>()
+            log("parameterId=${body.parameterId}")
             dao.deleteParameter(userId(), body.parameterId)
-            getListener(vrcParametersSession().userName)?.avatarParams = null
+            clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)
         }
         route("value") {
-            post {
+            tryPost {
                 val value = call.receive<PostParameterValue>()
+                log("parameterId=${value.parameterId} value=${value.value}")
                 dao.insertUpdateParameterValue(userId(), value)
-                getListener(vrcParametersSession().userName)?.avatarParams = null
+                clearListenerParamCache()
                 call.respond(HttpStatusCode.NoContent)
             }
-            delete {
+            tryDelete {
                 val body = call.receive<DeleteParameterValue>()
+                log("userId=${userId()} parameterId=${body.parameterId} value=${body.value}")
                 if (dao.deleteParameterValue(userId(), body.parameterId, body.value)) {
 
-                    val img = GetParameter.getImage(body.parameterId)
+                    val img = ParameterWithImage.getImage(body.parameterId)
                     if (img != null) {
                         Files.delete(img)
-                        Files.delete(Avatar.getDirectory(body.parameterId))
+                        Files.delete(ParameterWithImage.getDirectory(body.parameterId))
                     }
                 }
-                getListener(vrcParametersSession().userName)?.avatarParams = null
+                clearListenerParamCache()
                 call.respond(HttpStatusCode.NoContent)
             }
         }
-        post("/image") {
+        tryPost("/order") {
+            val body = call.receive<PostParameterOrder>()
+            log("")
+            dao.updateParameterOrder(userId(), body.parameterIds)
+            clearListenerParamCache()
+            call.respond(HttpStatusCode.NoContent)
+        }
+        tryPost("image") {
 
-            var parameterId: Long? = null
-            var fileName: String? = null
-            var fileBytes: ByteArray? = null
+            val img = receiveMultipartFile()
+            log("Handling upload for Parameter $img")
 
-            call.receiveMultipart().forEachPart {
-                when (it) {
-                    is PartData.FormItem -> {
-                        parameterId = it.value.toLong()
-                    }
-                    is PartData.FileItem -> {
-                        fileName = it.originalFileName
-                        fileBytes = it.streamProvider().readBytes()
-                    }
-                    else -> {
-                        call.application.environment.log.warn("Unhandled multipart type for $it")
-                    }
-                }
-            }
+            if (img.hasData()) {
 
-            call.application.environment.log.info("Handling upload for $parameterId / $fileName")
-
-            if (parameterId != null && fileName != null) {
-
-                if (!dao.validateParameterUserId(userId(), parameterId!!)) {
+                if (!dao.validateParameterUserId(userId(), img.id!!)) {
                     call.respond(HttpStatusCode.NoContent)
-                    return@post
+                    return@tryPost
                 }
 
-                val extension = fileName!!.substring(fileName!!.lastIndexOf('.'))
-                val path = GetParameter.getDirectory(parameterId!!).resolve("image$extension")
-                call.application.environment.log.info("Saving file to $path")
-                Files.createDirectory(path.parent)
-                Files.write(path, fileBytes!!)
+                val path = ParameterWithImage.getDirectory(img.id!!).resolve("image.png")
+                log("Saving file to $path")
+                if (!Files.exists(path.parent)) {
+                    Files.createDirectory(path.parent)
+                }
+                scale(img.data!!, 128, path)
+                clearListenerParamCache()
                 call.respond(HttpStatusCode.NoContent)
             } else {
                 call.respond(HttpStatusCode.BadRequest)
@@ -111,20 +108,23 @@ fun Route.manageParameterRoutes() {
 
 fun Route.basicParameterRoutes() {
     route ("parameter") {
-        post {
+        tryPost {
             val userId = call.attributes[AttributeKey("user-id")] as Long
             val targetUser = call.attributes[AttributeKey("target-user")] as String
 
             val listener = getListener(targetUser)
             val avatarId = listener?.avatar?.id
 
+            log("BASIC (Step 1) targetUser=${targetUser} avatarId=${avatarId}")
+
             if (avatarId == null) {
                 call.application.environment.log.info("$targetUser : No current avatar, cannot add parameters")
                 call.respond(HttpStatusCode.BadRequest)
-                return@post
+                return@tryPost
             }
 
             val param = call.receive<BasicPostParameter>()
+            log("BASIC (Step 2) name=${param.name} values=${param.values}")
             dao.importParameter(userId, avatarId, param)
 
             listener.avatarParams = null

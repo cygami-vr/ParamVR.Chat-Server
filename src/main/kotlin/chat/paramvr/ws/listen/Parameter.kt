@@ -2,6 +2,7 @@ package chat.paramvr.ws.listen
 
 import chat.paramvr.parameter.ParameterType
 import chat.paramvr.parameter.ParameterValue
+import chat.paramvr.parameter.ParameterWithImage
 import chat.paramvr.parameter.matches
 import chat.paramvr.ws.TriggerConnection
 import chat.paramvr.ws.VrcParameter
@@ -12,12 +13,12 @@ enum class MatchType {
 class Parameter(
     private val description: String?, val name: String, val key: String?, val type: Short, val dataType: Short,
     private val defaultValue: String?, private val minValue: String?, private val maxValue: String?,
-    var parameterId: Long? = null, var values: List<ParameterValue>? = null) {
+    val saved: String, parameterId: Long? = null, var values: List<ParameterValue>? = null): ParameterWithImage(parameterId) {
 
     fun copyParam(): Parameter {
         return Parameter(
             description, name, key, type, dataType,
-            defaultValue, minValue, maxValue,
+            defaultValue, minValue, maxValue, saved,
             parameterId, values?.toMutableList())
     }
 

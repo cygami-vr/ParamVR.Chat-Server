@@ -17,6 +17,7 @@ import chat.paramvr.avatar.basicAvatarRoutes
 import chat.paramvr.parameter.basicParameterRoutes
 import chat.paramvr.parameter.manageParameterRoutes
 import chat.paramvr.ws.vrcParameterSockets
+import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.util.pipeline.*
 
@@ -37,10 +38,6 @@ fun main(args: Array<String>) {
         }
         embeddedServer(Netty, env).start(true)
     }
-}
-
-fun PipelineContext<Unit, ApplicationCall>.log(msg: String) {
-    call.application.environment.log.info("${call.request.httpMethod} ${call.request.uri} userId=${userId()} $msg")
 }
 
 fun Application.module() {

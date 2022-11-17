@@ -11,32 +11,19 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 fun Route.uploadLogRoute() {
-    post("/log") {
+    tryPost("/log") {
 
         val targetUser = call.attributes[AttributeKey("target-user")] as String
-        var fileName: String? = null
-        var fileBytes: ByteArray? = null
+        val log = receiveMultipartFile()
 
-        call.receiveMultipart().forEachPart {
-            when (it) {
-                is PartData.FileItem -> {
-                    fileName = it.originalFileName
-                    fileBytes = it.streamProvider().readBytes()
-                }
-                else -> {
-                    call.application.environment.log.warn("$targetUser : Unhandled multipart type for $it")
-                }
-            }
-        }
+        log("$targetUser : Handling upload for Log ${log.name}")
 
-        call.application.environment.log.info("$targetUser : Handling upload for $fileName")
+        if (log.name != null) {
 
-        if (fileName != null) {
+            val path = Paths.get("uploads/logs").resolve("$targetUser-${log.name}.log")
+            log("Saving file to $path")
 
-            val path = Paths.get("uploads/logs").resolve("$targetUser-$fileName.log")
-            call.application.environment.log.info("Saving file to $path")
-
-            Files.write(path, fileBytes!!)
+            Files.write(path, log.data!!)
             call.respond(HttpStatusCode.NoContent)
         } else {
             call.respond(HttpStatusCode.BadRequest)

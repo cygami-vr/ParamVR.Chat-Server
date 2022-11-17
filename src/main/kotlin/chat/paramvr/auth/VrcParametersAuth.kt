@@ -12,6 +12,7 @@ import io.ktor.util.*
 import chat.paramvr.Crypto
 import chat.paramvr.conf
 import chat.paramvr.prod
+import chat.paramvr.tryPost
 import java.util.*
 import kotlin.text.toCharArray
 
@@ -50,6 +51,7 @@ fun AuthenticationConfig.installVrcParametersAuth() {
             }
 
             request.cookies["Quick-Auth"]?.let {
+                application.environment.log.info("Trying Quick-Auth")
                 dao.retrieveUserForQuickAuth(it)?.let { user ->
                     sessions.set(user.newSession())
                     return@validate UserIdPrincipal(credentials.name)
@@ -83,20 +85,20 @@ fun AuthenticationConfig.installVrcParametersAuth() {
 }
 
 fun Route.authRoutes() {
-    post("login") {
+    tryPost("login") {
         val body = JsonObject()
         body.addProperty("userName", vrcParametersSession().userName)
         body.addProperty("userId", userId())
 
         call.respond(body)
     }
-    post("logout") {
+    tryPost("logout") {
         call.sessions.clear<VrcParametersSession>()
         call.response.cookies.appendExpired("Quick-Auth")
         call.respond(HttpStatusCode.NoContent)
     }
     route("account") {
-        post {
+        tryPost {
             val request = call.receive<JsonObject>()
             val newPassword = request.get("newPassword").asString
             val authUser = dao.retrieveUser(id = userId())!!

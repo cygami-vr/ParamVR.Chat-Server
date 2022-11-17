@@ -39,10 +39,16 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
 
     fun isActive() = System.currentTimeMillis() - lastActivity < 60000
 
+    fun removeUnsavedMutatedParams() {
+        getParams().filter { p -> p.saved == "N" }.forEach {
+            mutatedParams.remove(it.name)
+        }
+    }
+
     fun getParams(): List<Parameter> {
         if (avatarParams == null) {
             avatarParams = parameterDAO.retrieveParameters(userId, avatar?.vrcUuid)
-            log("Updating cache with ${avatarParams!!.size} parameters, UUID = ${avatar?.vrcUuid}")
+            log("Updating cache with ${avatarParams?.size} parameters, UUID = ${avatar?.vrcUuid}")
         }
         return avatarParams!!
     }
@@ -109,6 +115,7 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         sendGenericParameter("isPancake", isPancake)
         avatarParams = null // force sendParameters to update
         sendParameters()
+        removeUnsavedMutatedParams()
     }
 
     private suspend fun updateVrcOpen() {

@@ -1,7 +1,7 @@
 package chat.paramvr.avatar
 
+import chat.paramvr.*
 import chat.paramvr.auth.userId
-import chat.paramvr.log
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -9,24 +9,33 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import java.awt.MediaTracker
+import java.awt.Toolkit
+import java.awt.image.BufferedImage
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+import javax.imageio.ImageIO
 
 val dao = AvatarDAO()
 
 fun Route.avatarRoutes() {
     route("avatar") {
-        get {
+        tryGet {
             call.respond(dao.retrieveAvatars(userId()))
         }
-        post {
-            val toInsert = call.receive<PostAvatar>()
-            log("UUID=${toInsert.vrcUuid} Name=${toInsert.name}")
-            dao.insertAvatar(userId(), toInsert)
+        tryPost {
+            val avatar = call.receive<PostAvatar>()
+            log("ID=${avatar.id} UUID=${avatar.vrcUuid} Name=${avatar.name}")
+            if (avatar.id == null) {
+                dao.insertAvatar(userId(), avatar)
+            } else {
+                dao.updateAvatar(userId(), avatar)
+            }
             call.respond(HttpStatusCode.NoContent)
         }
-        delete {
+        tryDelete {
             val toDelete = call.receive<DeleteAvatar>()
-            call.application.environment.log.info("DELETE /avatar userId=${userId()} ID=${toDelete.id}")
+            log("ID=${toDelete.id}")
 
             if (dao.deleteAvatar(userId(), toDelete.id)) {
                 val img = Avatar.getImage(toDelete.id)
@@ -38,41 +47,26 @@ fun Route.avatarRoutes() {
 
             call.respond(HttpStatusCode.NoContent)
         }
-        post("image") {
+        tryPost("image") {
 
-            var avatarId: Long? = null
-            var fileName: String? = null
-            var fileBytes: ByteArray? = null
+            val img = receiveMultipartFile()
 
-            call.receiveMultipart().forEachPart {
-                when (it) {
-                    is PartData.FormItem -> {
-                        avatarId = it.value.toLong()
-                    }
-                    is PartData.FileItem -> {
-                        fileName = it.originalFileName
-                        fileBytes = it.streamProvider().readBytes()
-                    }
-                    else -> {
-                        call.application.environment.log.warn("Unhandled multipart type for $it")
-                    }
-                }
-            }
+            log("Handling upload for Avatar $img")
 
-            call.application.environment.log.info("Handling upload for $avatarId / $fileName")
+            if (img.hasData()) {
 
-            if (avatarId != null && fileName != null) {
-
-                if (!dao.validateAvatarUserId(userId(), avatarId!!)) {
+                if (!dao.validateAvatarUserId(userId(), img.id!!)) {
                     call.respond(HttpStatusCode.NoContent)
-                    return@post
+                    return@tryPost
                 }
 
-                val extension = fileName!!.substring(fileName!!.lastIndexOf('.'))
-                val path = Avatar.getDirectory(avatarId!!).resolve("image$extension")
-                call.application.environment.log.info("Saving file to $path")
-                Files.createDirectory(path.parent)
-                Files.write(path, fileBytes!!)
+                val path = Avatar.getDirectory(img.id!!).resolve("image.png")
+                log("Saving file to $path")
+                if (!Files.exists(path.parent)) {
+                    Files.createDirectory(path.parent)
+                }
+
+                scale(img.data!!, 512, path)
                 call.respond(HttpStatusCode.NoContent)
             } else {
                 call.respond(HttpStatusCode.BadRequest)
@@ -83,9 +77,10 @@ fun Route.avatarRoutes() {
 
 fun Route.basicAvatarRoutes() {
     route ("avatar") {
-        post {
+        tryPost {
             val userId = call.attributes[AttributeKey("user-id")] as Long
             val toInsert = call.receive<PostAvatar>()
+            log("BASIC avatarId=${toInsert.id} avatarName=${toInsert.name}")
             dao.insertAvatar(userId, toInsert)
             call.respond(HttpStatusCode.NoContent)
         }
