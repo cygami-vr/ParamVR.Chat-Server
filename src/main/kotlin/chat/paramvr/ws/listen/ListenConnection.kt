@@ -7,12 +7,14 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import chat.paramvr.avatar.AvatarDAO
 import chat.paramvr.parameter.DataType
-import chat.paramvr.ws.Connection
-import chat.paramvr.ws.connections
-import chat.paramvr.ws.parameterDAO
-import chat.paramvr.ws.target
+import chat.paramvr.ws.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.lang.Long.parseLong
 
-class ListenConnection(session: DefaultWebSocketServerSession, targetUser: String, private val userId: Long,
+class ListenConnection(session: DefaultWebSocketServerSession, targetUser: String, val userId: Long,
                        var avatar: Avatar? = null, var muted: Boolean? = null, var isPancake: Boolean? = null,
                        var afk: Boolean? = null, var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
                        var lastActivityPing: Long = -1,
@@ -22,7 +24,12 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
                             // If avatars share parameters, or if a parameter is unsaved on the avatar,
                             // this could result in incorrect values getting sent to the client.
                        val mutatedParams: MutableMap<String, Any> = mutableMapOf(),
-                       var avatarParams: List<Parameter>? = null
+
+                            // OK to send the keys to the client
+                            // parameters are only sent if the TriggerConnection has the right keys anyway
+                       var avatarParams: List<Parameter>? = null,
+
+                       val buttonJobs: MutableMap<String, Job> = mutableMapOf()
 
 ): Connection(session, targetUser) {
 
@@ -39,6 +46,27 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
 
     fun isActive() = System.currentTimeMillis() - lastActivity < 60000
 
+    fun scheduleButtonMaxPress(param: Parameter) {
+        buttonJobs[param.name]?.let {
+            if (!it.isCompleted) {
+                log("${param.name} Button Job is incomplete, canceling it now")
+                it.cancel()
+            }
+        }
+        param.defaultValue?.let {
+            val job = GlobalScope.launch {
+                try {
+                    delay(parseLong(param.maxValue))
+                } catch (ex: NumberFormatException) {
+                    warn("${param.maxValue} is not valid")
+                }
+                log("${param.name} Button reached max press time")
+                sendSerialized(ParameterChange(param.name, it, param.dataType))
+            }
+            buttonJobs[param.name] = job
+        }
+    }
+
     fun removeUnsavedMutatedParams() {
         getParams().filter { p -> p.saved == "N" }.forEach {
             mutatedParams.remove(it.name)
@@ -53,6 +81,10 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         return avatarParams!!
     }
 
+    fun getParam(change: ParameterChange) = getParams().find { it.name == change.name }
+
+    fun getParam(lock: ParameterLock) = getParams().find { it.name == lock.name }
+
     suspend fun setAvatar(avatarName: String) {
         avatar = avatarDAO.retrieveAvatar(userId, name = avatarName)
         log("New avatar = ${avatar?.name}")
@@ -63,14 +95,20 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
 
     suspend inline fun notifyConnected(connected: Boolean) {
         sendGenericParameter("connected", connected)
+        if (connected) {
+            connections.target(targetUser).forEach {
+                it.sendLockedParams()
+            }
+        }
     }
 
     private suspend fun sendParameters() {
         val params = getParams()
         log("Sending ${params.size} parameters, vrcOpen = $vrcOpen")
         connections.target(targetUser).forEach {
+            // Considering vrcOpen == null as true
             if (vrcOpen != false) {
-                val filtered = params.filterKeys(it.parameterKeys)
+                val filtered = params.filterViewable(it)
                 if (params.size != filtered.size) {
                     log("${params.size - filtered.size} parameters filtered out")
                 }
@@ -86,10 +124,11 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         log("Sending sensitive ${param.name} = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", param.name)
+        toSend.addProperty("type", "value")
         setProperty(toSend, value)
         connections.target(targetUser).forEach { triggerCon ->
 
-            val matchType = param.checkKeys(triggerCon.parameterKeys, value)
+            val matchType = param.matchView(triggerCon.parameterKeys, value)
             if (matchType == MatchType.GOOD) {
                 triggerCon.sendSerialized(toSend)
             }

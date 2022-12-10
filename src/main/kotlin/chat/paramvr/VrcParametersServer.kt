@@ -20,6 +20,7 @@ import chat.paramvr.ws.vrcParameterSockets
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.util.pipeline.*
+import java.time.Duration
 
 val conf = AppConfig()
 val prod = conf.hasKeystore()
@@ -54,7 +55,9 @@ fun Application.module() {
     }
 
     install(Sessions) {
-        cookie<VrcParametersSession>("SESSION", storage = SessionStorageMemory())
+        cookie<VrcParametersSession>("SESSION", storage = SessionStorageMemory()) {
+            cookie.secure = prod
+        }
     }
 
     install(Authentication) {
@@ -63,6 +66,8 @@ fun Application.module() {
 
     install(WebSockets) {
         contentConverter = GsonWebsocketContentConverter()
+        timeout = Duration.ofMinutes(5)
+        maxFrameSize = 1024 * 1024 * 1024 // 1 MiB
     }
 
     routing {

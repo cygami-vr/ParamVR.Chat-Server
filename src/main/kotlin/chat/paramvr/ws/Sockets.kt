@@ -11,7 +11,9 @@ import chat.paramvr.parameter.ParameterDAO
 import chat.paramvr.ws.listen.ListenConnection
 import java.util.*
 
-data class VrcParameter(val name: String, val value: String, val dataType: Short)
+data class TriggerMessage(val lock: ParameterLock?, val change: ParameterChange?)
+data class ParameterLock(val name: String, val locked: Boolean)
+data class ParameterChange(val name: String, val value: String, val dataType: Short)
 
 val listeners: MutableSet<ListenConnection> = Collections.synchronizedSet(HashSet())
 val connections: MutableSet<TriggerConnection> = Collections.synchronizedSet(HashSet())
@@ -71,8 +73,14 @@ fun Route.vrcParameterSockets() {
     }
 
     webSocket("/parameter-trigger") {
+
+        // This is a work-around for an issue where an Apache proxy server
+        // might not flush the HTTP 101 Switching Protocols response.
+        send(Frame.Text("\"Connected\""))
+
         val targetUser = (incoming.receive() as Frame.Text).readText()
         val exists = parameterDAO.userExists(targetUser)
+
         if (!exists) {
             close(CloseReason(CloseReason.Codes.NORMAL, "No such user"))
             return@webSocket
@@ -86,9 +94,18 @@ fun Route.vrcParameterSockets() {
 
         val parameterKeys = (incoming.receive() as Frame.Text).readText().split(',')
 
-        val con = TriggerConnection(targetUser, parameterKeys, this)
+        var uuid = (incoming.receive() as Frame.Text).readText()
+
+        val con = TriggerConnection(targetUser, parameterKeys, this, uuid)
+
+        if (uuid == "New-Trigger") {
+            uuid = UUID.randomUUID().toString()
+            con.sendGenericParameter("uuid", uuid)
+            con.uuid = uuid
+        }
+
         connections += con
-        log("$targetUser : New trigger connection, Keys = $parameterKeys")
+        log("$targetUser : New trigger connection, Keys = $parameterKeys, UUID = $uuid")
         con.sendParameters()
 
         val available = listeners.any { it.targetUser == targetUser }
@@ -100,23 +117,38 @@ fun Route.vrcParameterSockets() {
 
         try {
             while (true) {
-                val param = receiveDeserialized<VrcParameter>()
-                if (con.checkSpam())
-                    continue
-
-                log("$targetUser : Received VrcParameter ${param.name} = ${param.value}")
-
-                if (param.name == "chat-paramvr-activity") {
-                    con.checkActivity(param)
-                } else {
-                    con.trigger(param)
-                }
+                receiveTriggerMessage(con)
             }
         } catch (e: ClosedReceiveChannelException) {
             connections.removeIf { it === con }
             log("$targetUser : TriggerConnection closed")
         } catch (t: Throwable) {
             con.logAndClose("Unexpected error in TriggerConnection", t)
+        }
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.receiveTriggerMessage(con: TriggerConnection) {
+    val msgs = receiveDeserialized<Array<TriggerMessage>>()
+    if (con.checkSpam())
+        return
+
+    for (msg in msgs) {
+        if (msg.lock != null) {
+            val lock = msg.lock
+            log("${con.targetUser} : Received ParameterLock ${lock.name} = ${lock.locked}")
+            con.lock(lock)
+        } else if (msg.change != null) {
+            val change = msg.change
+            log("${con.targetUser} : Received ParameterChange ${change.name} = ${change.value}")
+
+            if (change.name == "chat-paramvr-activity") {
+                con.checkActivity(change)
+            } else {
+                con.trigger(change)
+            }
+        } else {
+            warn("${con.targetUser} : TriggerMessage is empty")
         }
     }
 }

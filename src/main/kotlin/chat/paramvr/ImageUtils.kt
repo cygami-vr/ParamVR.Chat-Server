@@ -12,7 +12,7 @@ import javax.imageio.ImageIO
 fun PipelineContext<Unit, ApplicationCall>.scale(imgData: ByteArray, maxSize: Int, dest: Path) {
 
     // Toolkit gets colors correct more often than ImageIO
-    val img = Toolkit.getDefaultToolkit().createImage(imgData!!)
+    val img = Toolkit.getDefaultToolkit().createImage(imgData)
 
     // Unfortunately haven't found a better way than creating this unused panel
     val tracker = MediaTracker(Panel())

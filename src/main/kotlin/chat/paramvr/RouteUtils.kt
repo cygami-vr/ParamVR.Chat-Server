@@ -1,5 +1,6 @@
 package chat.paramvr
 
+import chat.paramvr.auth.VrcParametersSession
 import chat.paramvr.auth.userId
 import chat.paramvr.auth.vrcParametersSession
 import chat.paramvr.ws.getListener
@@ -9,10 +10,12 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 import io.ktor.util.pipeline.*
 
 fun PipelineContext<Unit, ApplicationCall>.log(msg: String) {
-    call.application.environment.log.info("${call.request.httpMethod.value} ${call.request.uri} userId = ${userId()} $msg")
+    val userId = call.sessions.get<VrcParametersSession>()?.userId
+    call.application.environment.log.info("${call.request.httpMethod.value} ${call.request.uri} userId = $userId $msg")
 }
 
 fun PipelineContext<Unit, ApplicationCall>.clearListenerParamCache() {
@@ -49,7 +52,8 @@ suspend fun PipelineContext<Unit, ApplicationCall>.receiveMultipartFile(): Multi
 }
 
 suspend fun PipelineContext<Unit, ApplicationCall>.handleThrowable(t: Throwable) {
-    call.application.environment.log.error("Uncaught throwable in route ${call.request.httpMethod.value} ${call.request.uri} userId=${userId()}", t)
+    val userId = call.sessions.get<VrcParametersSession>()?.userId
+    call.application.environment.log.error("Uncaught throwable in route ${call.request.httpMethod.value} ${call.request.uri} userId = $userId", t)
     call.respond(HttpStatusCode.InternalServerError)
 }
 

@@ -3,18 +3,12 @@ package chat.paramvr.avatar
 import chat.paramvr.*
 import chat.paramvr.auth.userId
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
-import java.awt.MediaTracker
-import java.awt.Toolkit
-import java.awt.image.BufferedImage
 import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-import javax.imageio.ImageIO
 
 val dao = AvatarDAO()
 
@@ -25,7 +19,7 @@ fun Route.avatarRoutes() {
         }
         tryPost {
             val avatar = call.receive<PostAvatar>()
-            log("ID=${avatar.id} UUID=${avatar.vrcUuid} Name=${avatar.name}")
+            log("ID = ${avatar.id} UUID = ${avatar.vrcUuid} Name = ${avatar.name}")
             if (avatar.id == null) {
                 dao.insertAvatar(userId(), avatar)
             } else {
@@ -35,7 +29,7 @@ fun Route.avatarRoutes() {
         }
         tryDelete {
             val toDelete = call.receive<DeleteAvatar>()
-            log("ID=${toDelete.id}")
+            log("ID = ${toDelete.id}")
 
             if (dao.deleteAvatar(userId(), toDelete.id)) {
                 val img = Avatar.getImage(toDelete.id)
@@ -47,29 +41,39 @@ fun Route.avatarRoutes() {
 
             call.respond(HttpStatusCode.NoContent)
         }
-        tryPost("image") {
+        route("image") {
+            tryPost {
 
-            val img = receiveMultipartFile()
+                val img = receiveMultipartFile()
 
-            log("Handling upload for Avatar $img")
+                log("Handling upload for Avatar $img")
 
-            if (img.hasData()) {
+                if (img.hasData()) {
 
-                if (!dao.validateAvatarUserId(userId(), img.id!!)) {
+                    if (!dao.validateAvatarUserId(userId(), img.id!!)) {
+                        call.respond(HttpStatusCode.NoContent)
+                        return@tryPost
+                    }
+
+                    val path = Avatar.getDirectory(img.id).resolve("image.png")
+                    log("Saving file to $path")
+                    if (!Files.exists(path.parent)) {
+                        Files.createDirectory(path.parent)
+                    }
+
+                    scale(img.data!!, 512, path)
                     call.respond(HttpStatusCode.NoContent)
-                    return@tryPost
+                } else {
+                    call.respond(HttpStatusCode.BadRequest)
                 }
-
-                val path = Avatar.getDirectory(img.id!!).resolve("image.png")
-                log("Saving file to $path")
-                if (!Files.exists(path.parent)) {
-                    Files.createDirectory(path.parent)
-                }
-
-                scale(img.data!!, 512, path)
+            }
+            tryDelete {
+                val id = call.receiveText().toLong()
+                log("id = $id")
+                val path = Avatar.getDirectory(id).resolve("image.png")
+                Files.deleteIfExists(path)
+                clearListenerParamCache()
                 call.respond(HttpStatusCode.NoContent)
-            } else {
-                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
@@ -80,7 +84,7 @@ fun Route.basicAvatarRoutes() {
         tryPost {
             val userId = call.attributes[AttributeKey("user-id")] as Long
             val toInsert = call.receive<PostAvatar>()
-            log("BASIC avatarId=${toInsert.id} avatarName=${toInsert.name}")
+            log("BASIC avatarId = ${toInsert.id} avatarName = ${toInsert.name}")
             dao.insertAvatar(userId, toInsert)
             call.respond(HttpStatusCode.NoContent)
         }

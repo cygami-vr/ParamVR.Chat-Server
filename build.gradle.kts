@@ -19,7 +19,7 @@ repositories {
     maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
 }
 
-val ktorVersion = "2.0.2"
+val ktorVersion = "2.1.3"
 
 dependencies {
     testImplementation(kotlin("test"))

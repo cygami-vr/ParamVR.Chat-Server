@@ -1,5 +1,6 @@
 package chat.paramvr.parameter
 
+import chat.paramvr.conf
 import chat.paramvr.prod
 import java.nio.file.Files
 import java.nio.file.Path
@@ -8,7 +9,7 @@ import java.nio.file.Paths
 
 data class ParameterValue(val description: String?, val value: String, val key: String?, val parameterId: Long? = null)
 
-fun ParameterValue.matches(keys: List<String>) = key.isNullOrEmpty() || keys.contains(key)
+fun ParameterValue.canView(keys: List<String>) = key.isNullOrEmpty() || keys.contains(key)
 
 open class ParameterWithImage(var parameterId: Long? = null) {
 
@@ -33,14 +34,15 @@ open class ParameterWithImage(var parameterId: Long? = null) {
             val path = Paths.get("uploads/parameters").relativize(img)
                 .toString().replace('\\', '/')
 
-            return if (prod) "/f/parameter/$path" else "http://localhost:8093/f/parameter/$path"
+            return if (prod) "/f/parameter/$path" else "http://localhost:${conf.getPort()}/f/parameter/$path"
         }
     }
 }
 
 class GetParameter (
     private val description: String?, val name: String, private val key: String?, val type: Short, val dataType: Short,
-    private val defaultValue: String?, private val minValue: String?, private val maxValue: String?, private val saved: String,
+    private val defaultValue: String?, private val minValue: String?, private val maxValue: String?, private val pressValue: String?,
+    private val saved: String, private val lockable: String,
     var avatarVrcUuid: String?, var avatarName: String?,
     parameterId: Long? = null, var values: List<ParameterValue>? = null): ParameterWithImage(parameterId) {
 }

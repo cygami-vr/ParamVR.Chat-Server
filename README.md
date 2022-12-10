@@ -31,6 +31,12 @@ create table avatar(
     foreign key (user_id) references user(id) on delete cascade
 );
 
+-- Consider splitting into separate tables by type
+-- LOV default_value
+-- Toggle default_value
+-- Slider min_value, max_value, default_value
+-- Button press_value, release_value, min_press_time, max_press_time
+
 create table parameter(
     id bigint primary key auto_increment,
     user_id bigint,
@@ -44,6 +50,8 @@ create table parameter(
     min_value varchar(16),
     max_value varchar(16),
     saved char(1) default 'Y' not null,
+    lockable char(1) default 'N' not null,
+    press_value varchar(16),
     `order` tinyint,
     unique key (user_id, avatar_id, name),
     foreign key (user_id) references user(id) on delete cascade,
@@ -56,6 +64,12 @@ create table parameter_value(
     value varchar(16),
     `key` varchar(16),
     primary key (parameter_id, value),
+    foreign key (parameter_id) references parameter(id) on delete cascade
+);
+
+create table locked_parameter(
+    parameter_id bigint primary key,
+    `key` varchar(36),
     foreign key (parameter_id) references parameter(id) on delete cascade
 );
 ```

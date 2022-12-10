@@ -4,13 +4,13 @@ import com.google.gson.JsonObject
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import chat.paramvr.avatar.Avatar
+import chat.paramvr.parameter.ParameterType
 import chat.paramvr.ws.listen.ListenConnection
 import chat.paramvr.ws.listen.MatchType
-import chat.paramvr.ws.listen.checkKeys
-import chat.paramvr.ws.listen.filterKeys
+import chat.paramvr.ws.listen.filterViewable
 
 class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
-                        session: DefaultWebSocketServerSession, var lastTrigger: Long = -1)
+                        session: DefaultWebSocketServerSession, var uuid: String, var lastTrigger: Long = -1)
     : Connection(session, targetUser) {
 
     private fun listener(action: String): ListenConnection? {
@@ -31,7 +31,7 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
         }
     }
 
-    suspend fun checkActivity(param: VrcParameter) {
+    suspend fun checkActivity(param: ParameterChange) {
         listener("ping activity")?.let {
             sendGenericParameter("active", it.isActive())
             val time = System.currentTimeMillis()
@@ -44,8 +44,9 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
     }
     suspend fun sendParameters() {
         listener("send parameters")?.let {
+            // Considering vrcOpen == null as true
             if (it.vrcOpen != false) {
-                val params = it.getParams().filterKeys(parameterKeys)
+                val params = it.getParams().filterViewable(this)
                 log("Sending ${params.size} parameters")
                 sendSerialized(params)
             } else {
@@ -54,12 +55,43 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
         }
     }
 
-    suspend fun trigger(param: VrcParameter) {
-        listener("trigger VrcParameter")?.let {
-            val matchType = it.getParams().checkKeys(this, param)
-            log("Attempting to trigger VrcParameter ${param.name} = ${param.value}, MatchType = $matchType")
+    suspend fun lock(lock: ParameterLock) {
+        listener("trigger ParameterLock")?.let { listenCon ->
+
+            val parameter = listenCon.getParam(lock)
+            val matchType = parameter?.matchModify(parameterKeys, uuid)
+            log("Attempting to trigger ParameterLock ${lock.name} = ${lock.locked}, MatchType = $matchType")
+
             if (matchType == MatchType.GOOD) {
-                it.sendSerialized(param)
+
+                val valid = parameterDAO.setParameterLock(listenCon.userId, parameter.parameterId!!, lock.locked, uuid)
+                log("Attempted to update lock in database, valid = $valid")
+
+                if (valid) {
+
+                    parameter.lockKey = if (lock.locked) uuid else null
+
+                    connections.target(targetUser).forEach { triggerCon ->
+
+                        if (parameter.canView(triggerCon.parameterKeys)) {
+                            triggerCon.sendParameterLock(lock.name, lock.locked, if (uuid == triggerCon.uuid) uuid else null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun trigger(paramChg: ParameterChange) {
+        listener("trigger ParameterChange")?.let {
+            val param = it.getParam(paramChg)
+            val matchType = param?.matchModify(parameterKeys, paramChg.value, uuid)
+            log("Attempting to trigger ParameterChange ${paramChg.name} = ${paramChg.value}, MatchType = $matchType")
+            if (matchType == MatchType.GOOD) {
+                it.sendSerialized(paramChg)
+                if (param.type == ParameterType.BUTTON.id) {
+                    it.scheduleButtonMaxPress(param)
+                }
             }
         }
     }
@@ -84,19 +116,36 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
             sendSerialized(obj)
         }
         sendMutatedParams()
+        sendLockedParams()
     }
 
     suspend fun sendMutatedParams() {
-        listener("send listener params")?.let { listener ->
+        listener("send mutated params")?.let { listener ->
             listener.getParams().forEach {
 
                 val value = listener.mutatedParams[it.name]
-                val matchType = if (value != null) it.checkKeys(parameterKeys, value) else null
+                val matchType = if (value != null) it.matchView(parameterKeys) else null
                 log("Attempting to send mutated param ${it.name} = $value," +
                         " matchType = $matchType, vrcOpen = ${listener.vrcOpen}")
 
+                // Considering vrcOpen == null as true
                 if (listener.vrcOpen != false && matchType == MatchType.GOOD) {
                     sendGenericParameter(it.name, listener.mutatedParams[it.name])
+                }
+            }
+        }
+    }
+
+    suspend fun sendLockedParams() {
+        listener("send locked params")?.let { listener ->
+            listener.getParams().filter { it.lockKey != null }.forEach {
+                val matchType = it.matchView(parameterKeys)
+                log("Attempting to send locked param ${it.name}," +
+                        " matchType = $matchType, vrcOpen = ${listener.vrcOpen}")
+
+                // Considering vrcOpen == null as true
+                if (listener.vrcOpen != false && matchType == MatchType.GOOD) {
+                    sendParameterLock(it.name, it.lockKey != null, if (it.lockKey == uuid) uuid else null )
                 }
             }
         }
@@ -106,6 +155,19 @@ class TriggerConnection(targetUser: String, val parameterKeys: List<String>,
         val toSend = JsonObject()
         toSend.addProperty("name", name)
         setProperty(toSend, value)
+        toSend.addProperty("type", "value")
+        sendSerialized(toSend)
+    }
+
+    suspend fun sendParameterLock(name: String, locked: Boolean, lockKey: String?) {
+        log("Sending lock $name = $locked")
+        val toSend = JsonObject()
+        toSend.addProperty("name", name)
+        toSend.addProperty("locked", locked)
+        toSend.addProperty("type", "lock")
+        lockKey?.let {
+            toSend.addProperty("lockKey", it)
+        }
         sendSerialized(toSend)
     }
 }

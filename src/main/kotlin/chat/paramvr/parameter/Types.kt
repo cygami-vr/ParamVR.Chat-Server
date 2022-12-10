@@ -1,4 +1,4 @@
-package chat.paramvr.parameter;
+package chat.paramvr.parameter
 
 import com.google.gson.JsonElement
 
@@ -22,5 +22,6 @@ enum class DataType(val id: Short) {
 enum class ParameterType(val id: Short) {
     LOV(1),     // Int or Float
     TOGGLE(2),  // Boolean only
-    SLIDER(3);  // Float only
+    SLIDER(3),  // Float only
+    BUTTON(4);  // Any
 }

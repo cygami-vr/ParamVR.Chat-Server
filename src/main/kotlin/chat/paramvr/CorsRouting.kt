@@ -11,7 +11,7 @@ fun Route.corsRouting() {
     if (!prod) {
         options("/{url...}") {
             call.request.headers["Access-Control-Request-Method"]?.let {
-                call.response.header("Access-Control-Allow-Methods", it);
+                call.response.header("Access-Control-Allow-Methods", it)
             }
             call.respond(HttpStatusCode.OK)
         }
