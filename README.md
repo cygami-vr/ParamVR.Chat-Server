@@ -11,7 +11,7 @@ create table user(
 );
 
 # Makes the column case insensitive
-alter table user change name name varchar(16)
+alter table user modify name varchar(16)
 character set latin1 collate latin1_general_ci null default null;
 
 create table quick_auth(
@@ -44,7 +44,7 @@ create table parameter(
     type tinyint,
     description varchar(64),
     name varchar(32),
-    `key` varchar(16),
+    requires_invite char(1) default 'N' not null,
     data_type tinyint,
     default_value varchar(16),
     min_value varchar(16),
@@ -58,18 +58,50 @@ create table parameter(
     foreign key (avatar_id) references avatar(id) on delete restrict
 );
 
+create table invite(
+    id bigint primary key auto_increment,
+    url char(8),
+    user_id bigint not null,
+    avatar_id bigint not null,
+    expires bigint,
+    unique key (url),
+    foreign key (user_id) references user(id) on delete cascade,
+    foreign key (avatar_id) references avatar(id) on delete cascade
+);
+
+alter table invite modify url char(8) character set latin1
+ collate latin1_general_cs null default null;
+
+create table invite_permission(
+    invite_id bigint,
+    parameter_id bigint,
+    foreign key (invite_id) references invite(id) on delete cascade,
+    foreign key (parameter_id) references parameter(id) on delete cascade
+);
+
 create table parameter_value(
     parameter_id bigint not null,
     description varchar(64),
     value varchar(16),
-    `key` varchar(16),
+    requires_invite char(1) default 'N' not null,
     primary key (parameter_id, value),
     foreign key (parameter_id) references parameter(id) on delete cascade
 );
 
 create table locked_parameter(
     parameter_id bigint primary key,
-    `key` varchar(36),
-    foreign key (parameter_id) references parameter(id) on delete cascade
+    client_id varchar(36),
+    invite_id bigint,
+    foreign key (parameter_id) references parameter(id) on delete cascade,
+    foreign key (invite_id) references invite(id) on delete cascade
 );
+
+create table trigger_session(
+    uuid varchar(36) primary key,
+    client_id varchar(36),
+    target_user varchar(16) not null,
+    invite_id bigint,
+    foreign key (invite_id) references invite(id) on delete cascade
+);
+
 ```

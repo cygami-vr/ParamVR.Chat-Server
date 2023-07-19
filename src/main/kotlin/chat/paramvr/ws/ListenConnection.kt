@@ -1,4 +1,4 @@
-package chat.paramvr.ws.listen
+package chat.paramvr.ws
 
 import chat.paramvr.avatar.Avatar
 import com.google.gson.JsonArray
@@ -6,30 +6,28 @@ import com.google.gson.JsonObject
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import chat.paramvr.avatar.AvatarDAO
+import chat.paramvr.invite.Invite
 import chat.paramvr.parameter.DataType
-import chat.paramvr.ws.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import chat.paramvr.ws.Sockets.connections
+import chat.paramvr.ws.Sockets.parameterDAO
+import kotlinx.coroutines.*
 import java.lang.Long.parseLong
 
-class ListenConnection(session: DefaultWebSocketServerSession, targetUser: String, val userId: Long,
-                       var avatar: Avatar? = null, var muted: Boolean? = null, var isPancake: Boolean? = null,
-                       var afk: Boolean? = null, var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
-                       var lastActivityPing: Long = -1,
+class ListenConnection(
 
-                            // Mutated params cannot be tracked as part of avatar params
-                            // because we need the mutated list to persist even when avatar params is overwritten.
-                            // If avatars share parameters, or if a parameter is unsaved on the avatar,
-                            // this could result in incorrect values getting sent to the client.
-                       val mutatedParams: MutableMap<String, Any> = mutableMapOf(),
+    session: DefaultWebSocketServerSession, targetUser: String, val userId: Long, var invites: List<Invite>,
+    var avatar: Avatar? = null, var muted: Boolean? = null, var isPancake: Boolean? = null,
+    var afk: Boolean? = null, private var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
+    var lastActivityPing: Long = -1,
 
-                            // OK to send the keys to the client
-                            // parameters are only sent if the TriggerConnection has the right keys anyway
-                       var avatarParams: List<Parameter>? = null,
+    // Mutated params cannot be tracked as part of avatar params
+    // because we need the mutated list to persist even when avatar params is overwritten.
+    // If avatars share parameters, or if a parameter is unsaved on the avatar,
+    // this could result in incorrect values getting sent to the client.
+    val mutatedParams: MutableMap<String, Any> = mutableMapOf(),
 
-                       val buttonJobs: MutableMap<String, Job> = mutableMapOf()
+    var avatarParams: List<Parameter>? = null,
+    private val buttonJobs: MutableMap<String, Job> = mutableMapOf()
 
 ): Connection(session, targetUser) {
 
@@ -42,13 +40,15 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         connections.target(targetUser).forEach {
             it.send(Frame.Text("[]"))
         }
+
+        buttonJobs.values.forEach { it.cancel() }
     }
 
     fun isActive() = System.currentTimeMillis() - lastActivity < 60000
 
     fun scheduleButtonMaxPress(param: Parameter) {
         buttonJobs[param.name]?.let {
-            if (!it.isCompleted) {
+            if (!it.isCompleted && !it.isCancelled) {
                 log("${param.name} Button Job is incomplete, canceling it now")
                 it.cancel()
             }
@@ -59,6 +59,9 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
                     delay(parseLong(param.maxValue))
                 } catch (ex: NumberFormatException) {
                     warn("${param.maxValue} is not valid")
+                } catch (ex: CancellationException) {
+                    log("Button coroutine cancelled")
+                    return@launch
                 }
                 log("${param.name} Button reached max press time")
                 sendSerialized(ParameterChange(param.name, it, param.dataType))
@@ -67,7 +70,7 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         }
     }
 
-    fun removeUnsavedMutatedParams() {
+    private fun removeUnsavedMutatedParams() {
         getParams().filter { p -> p.saved == "N" }.forEach {
             mutatedParams.remove(it.name)
         }
@@ -81,9 +84,17 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         return avatarParams!!
     }
 
-    fun getParam(change: ParameterChange) = getParams().find { it.name == change.name }
+    fun getParam(change: ParameterChange): Parameter? {
+        val param = getParams().find { it.name == change.name }
+        log("Getting parameter name = ${change.name}, Parameter found = ${param != null}")
+        return param
+    }
 
-    fun getParam(lock: ParameterLock) = getParams().find { it.name == lock.name }
+    fun getParam(lock: ParameterLock): Parameter? {
+        val param = getParams().find { it.name == lock.name }
+        log("Getting parameter name = ${lock.name}, Parameter found = ${param != null}")
+        return param
+    }
 
     suspend fun setAvatar(avatarName: String) {
         avatar = avatarDAO.retrieveAvatar(userId, name = avatarName)
@@ -94,7 +105,7 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
     }
 
     suspend inline fun notifyConnected(connected: Boolean) {
-        sendGenericParameter("connected", connected)
+        sendStatusParameter("connected", connected)
         if (connected) {
             connections.target(targetUser).forEach {
                 it.sendLockedParams()
@@ -108,7 +119,7 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         connections.target(targetUser).forEach {
             // Considering vrcOpen == null as true
             if (vrcOpen != false) {
-                val filtered = params.filterViewable(it)
+                val filtered = it.perms.filterViewable()
                 if (params.size != filtered.size) {
                     log("${params.size - filtered.size} parameters filtered out")
                 }
@@ -124,20 +135,21 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         log("Sending sensitive ${param.name} = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", param.name)
-        toSend.addProperty("type", "value")
+        toSend.addProperty("type", "parameter")
+        toSend.addProperty("parameter-type", "value")
         setProperty(toSend, value)
-        connections.target(targetUser).forEach { triggerCon ->
 
-            val matchType = param.matchView(triggerCon.parameterKeys, value)
-            if (matchType == MatchType.GOOD) {
+        connections.target(targetUser).forEach { triggerCon ->
+            if (triggerCon.perms.canView(param, value)) {
                 triggerCon.sendSerialized(toSend)
             }
         }
     }
-    suspend fun sendGenericParameter(name: String, value: Any?) {
-        log("Sending generic $name = $value")
+    suspend fun sendStatusParameter(name: String, value: Any?) {
+        log("Sending status $name = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", name)
+        toSend.addProperty("type", "status")
         setProperty(toSend, value)
         sendJson(toSend)
     }
@@ -149,17 +161,15 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
     }
 
     private suspend fun avatarChanged() {
-        sendGenericParameter("avatar", avatar?.name)
-        sendGenericParameter("image", avatar?.image)
-        sendGenericParameter("isPancake", isPancake)
+        sendStatusParameter("avatar", avatar?.name)
+        sendStatusParameter("image", avatar?.image)
+        sendStatusParameter("isPancake", isPancake)
         avatarParams = null // force sendParameters to update
         sendParameters()
         removeUnsavedMutatedParams()
     }
 
-    private suspend fun updateVrcOpen() {
-        sendGenericParameter("vrcOpen", vrcOpen)
-    }
+    private suspend fun updateVrcOpen() = sendStatusParameter("vrcOpen", vrcOpen)
 
     suspend fun handleListenerUpdates(updates: JsonArray) {
         val avatarChange = updates.find {
@@ -168,7 +178,7 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
         log("Handling ${updates.size()} listener updates. Avatar changed = ${avatarChange != null}")
         avatarChange?.let {
             val uuid = it.asJsonObject.get("value").asString
-            isPancake = true
+            isPancake = true // will be overwritten later if false
             avatar = avatarDAO.retrieveAvatar(userId, vrcUuid = uuid!!)
 
             if (vrcOpen != true) {
@@ -192,15 +202,15 @@ class ListenConnection(session: DefaultWebSocketServerSession, targetUser: Strin
             }
             "/avatar/parameters/MuteSelf" -> {
                 muted = value.asBoolean
-                sendGenericParameter("muted", muted)
+                sendStatusParameter("muted", muted)
             }
             "/avatar/parameters/VRMode" -> {
                 isPancake = false
-                sendGenericParameter("isPancake", isPancake)
+                sendStatusParameter("isPancake", isPancake)
             }
             "/avatar/parameters/AFK" -> {
                 afk = value.asBoolean
-                sendGenericParameter("afk", afk)
+                sendStatusParameter("afk", afk)
             }
             "/chat/paramvr/lastActivity" -> {
                 lastActivity = value.asLong

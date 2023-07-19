@@ -11,8 +11,9 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 import chat.paramvr.Crypto
 import chat.paramvr.conf
-import chat.paramvr.prod
+import chat.paramvr.isProduction
 import chat.paramvr.tryPost
+import io.ktor.util.date.*
 import java.util.*
 import kotlin.text.toCharArray
 
@@ -68,7 +69,7 @@ fun AuthenticationConfig.installVrcParametersAuth() {
                 sessions.set(user.newSession())
                 val quickAuthKey = UUID.randomUUID().toString()
 
-                response.cookies.append("Quick-Auth", quickAuthKey, maxAge = 2000000000L, secure = prod, httpOnly = true)
+                response.cookies.append("Quick-Auth", quickAuthKey, maxAge = 2000000000L, secure = isProduction, httpOnly = true)
 
                 dao.createQuickAuth(user, quickAuthKey)
                 user.failedLogins = 0
@@ -94,7 +95,7 @@ fun Route.authRoutes() {
     }
     tryPost("logout") {
         call.sessions.clear<VrcParametersSession>()
-        call.response.cookies.appendExpired("Quick-Auth")
+        call.response.cookies.append("Quick-Auth", "", expires = GMTDate.START)
         call.respond(HttpStatusCode.NoContent)
     }
     route("account") {

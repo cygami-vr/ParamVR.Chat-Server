@@ -23,7 +23,8 @@ val ktorVersion = "2.1.3"
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation ("mysql:mysql-connector-java:8.0.29")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.4.0")
+    implementation ("mysql:mysql-connector-java:8.0.32")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-server-core:$ktorVersion")
     implementation("io.ktor:ktor-serialization-gson:$ktorVersion")

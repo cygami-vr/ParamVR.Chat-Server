@@ -1,9 +1,8 @@
 package chat.paramvr
 
 import chat.paramvr.auth.VrcParametersSession
-import chat.paramvr.auth.userId
 import chat.paramvr.auth.vrcParametersSession
-import chat.paramvr.ws.getListener
+import chat.paramvr.ws.Sockets.getListener
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*

@@ -2,12 +2,12 @@ package chat.paramvr.parameter
 
 import chat.paramvr.*
 import chat.paramvr.auth.userId
+import chat.paramvr.ws.Sockets.getListener
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import chat.paramvr.ws.getListener
 import io.ktor.util.*
 import java.nio.file.Files
 import java.util.*

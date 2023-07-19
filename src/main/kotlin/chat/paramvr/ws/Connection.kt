@@ -1,5 +1,6 @@
 package chat.paramvr.ws
 
+import chat.paramvr.ws.Sockets.listeners
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.ktor.server.websocket.*

@@ -1,15 +1,12 @@
 package chat.paramvr.parameter
 
 import chat.paramvr.conf
-import chat.paramvr.prod
+import chat.paramvr.isProduction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-
-data class ParameterValue(val description: String?, val value: String, val key: String?, val parameterId: Long? = null)
-
-fun ParameterValue.canView(keys: List<String>) = key.isNullOrEmpty() || keys.contains(key)
+data class ParameterValue(val description: String?, val value: String, val requiresInvite: Boolean, val parameterId: Long? = null)
 
 open class ParameterWithImage(var parameterId: Long? = null) {
 
@@ -34,13 +31,13 @@ open class ParameterWithImage(var parameterId: Long? = null) {
             val path = Paths.get("uploads/parameters").relativize(img)
                 .toString().replace('\\', '/')
 
-            return if (prod) "/f/parameter/$path" else "http://localhost:${conf.getPort()}/f/parameter/$path"
+            return if (isProduction) "/f/parameter/$path" else "http://localhost:${conf.getPort()}/f/parameter/$path"
         }
     }
 }
 
 class GetParameter (
-    private val description: String?, val name: String, private val key: String?, val type: Short, val dataType: Short,
+    private val description: String?, val name: String, private val requiresInvite: String, val type: Short, val dataType: Short,
     private val defaultValue: String?, private val minValue: String?, private val maxValue: String?, private val pressValue: String?,
     private val saved: String, private val lockable: String,
     var avatarVrcUuid: String?, var avatarName: String?,

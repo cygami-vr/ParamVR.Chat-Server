@@ -7,7 +7,7 @@ class AppConfig : Config(Paths.get("vrcparameters-server.properties")) {
 
     override fun populate() {
         props.computeIfAbsent(host) { "" }
-        populate(port, if (prod) "443" else "80") { it.testInt() }
+        populate(port, if (isProduction) "443" else "80") { it.testInt() }
         populate(originPort, "3000") { it.testInt() }
         populate(sessionTimeout, "14400") { it.testInt() }
         props.computeIfAbsent(keystorePath) { "" }

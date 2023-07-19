@@ -1,6 +1,6 @@
 package chat.paramvr.avatar
 
-import chat.paramvr.prod
+import chat.paramvr.isProduction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -27,7 +27,7 @@ class Avatar(val id: Long, val vrcUuid: String, val name: String) {
             val path = Paths.get("uploads/avatars").relativize(img)
                 .toString().replace('\\', '/')
 
-            return if (prod) "/f/avatar/$path" else "http://localhost:8093/f/avatar/$path"
+            return if (isProduction) "/f/avatar/$path" else "http://localhost:8093/f/avatar/$path"
         }
     }
 }

@@ -8,7 +8,7 @@ import io.ktor.server.routing.*
 
 fun Route.corsRouting() {
 
-    if (!prod) {
+    if (!isProduction) {
         options("/{url...}") {
             call.request.headers["Access-Control-Request-Method"]?.let {
                 call.response.header("Access-Control-Allow-Methods", it)
@@ -17,14 +17,14 @@ fun Route.corsRouting() {
         }
     }
 
-    val origin =  if (prod) "https://${conf.getHost()}" else "http://localhost:${conf.getOriginPort()}"
+    val origin =  if (isProduction) "https://${conf.getHost()}" else "http://localhost:${conf.getOriginPort()}"
     environment?.log?.info("Origin = $origin")
 
     intercept(ApplicationCallPipeline.Plugins) {
         call.response.headers.append("Access-Control-Allow-Origin", origin)
         call.response.headers.append("X-Frame-Options", "DENY")
         call.response.cacheControl(CacheControl.NoStore(CacheControl.Visibility.Private))
-        if (!prod) {
+        if (!isProduction) {
             call.response.headers.append("Access-Control-Allow-Credentials", "true")
             call.response.headers.append("Access-Control-Allow-Headers", "content-type")
         }

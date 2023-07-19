@@ -14,19 +14,18 @@ import io.ktor.server.websocket.*
 import chat.paramvr.auth.*
 import chat.paramvr.avatar.avatarRoutes
 import chat.paramvr.avatar.basicAvatarRoutes
+import chat.paramvr.invite.inviteRoutes
 import chat.paramvr.parameter.basicParameterRoutes
 import chat.paramvr.parameter.manageParameterRoutes
-import chat.paramvr.ws.vrcParameterSockets
-import io.ktor.http.*
-import io.ktor.server.request.*
-import io.ktor.util.pipeline.*
+import chat.paramvr.ws.Sockets.vrcParameterSockets
+import chat.paramvr.ws.wsRoutes
 import java.time.Duration
 
 val conf = AppConfig()
-val prod = conf.hasKeystore()
+val isProduction = conf.hasKeystore()
 
 fun main(args: Array<String>) {
-    if (prod) {
+    if (isProduction) {
         EngineMain.main(args)
     } else {
         val env = applicationEngineEnvironment {
@@ -43,12 +42,12 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
 
-    log.info("prod = $prod")
+    log.info("prod = $isProduction")
 
     install(ContentNegotiation) {
         gson {
             serializeNulls()
-            if (!prod) {
+            if (!isProduction) {
                 setPrettyPrinting()
             }
         }
@@ -56,7 +55,7 @@ fun Application.module() {
 
     install(Sessions) {
         cookie<VrcParametersSession>("SESSION", storage = SessionStorageMemory()) {
-            cookie.secure = prod
+            cookie.secure = isProduction
         }
     }
 
@@ -82,8 +81,11 @@ fun Application.module() {
             default("public/index.html")
         }
 
-        // This can expose internal ID values of protected parameters.
-        // However, this is acceptable as the name, username, or key associated with the parameter is not exposed this way.
+        static("/nv/{invite}") {
+            files("public")
+            default("public/index.html")
+        }
+
         static("/f/avatar") {
             files("uploads/avatars")
         }
@@ -97,6 +99,7 @@ fun Application.module() {
             authRoutes()
             manageParameterRoutes()
             avatarRoutes()
+            inviteRoutes()
         }
 
         authenticate("Basic-ListenKey") {
@@ -110,5 +113,6 @@ fun Application.module() {
         get("/discord") { call.respond(conf.getDiscordInvite()) }
 
         vrcParameterSockets()
+        wsRoutes()
     }
 }
