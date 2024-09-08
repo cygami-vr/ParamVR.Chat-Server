@@ -8,6 +8,8 @@ import io.ktor.server.routing.*
 
 fun Route.corsRouting() {
 
+    val isProduction = conf.isProduction()
+
     if (!isProduction) {
         options("/{url...}") {
             call.request.headers["Access-Control-Request-Method"]?.let {
@@ -17,7 +19,7 @@ fun Route.corsRouting() {
         }
     }
 
-    val origin =  if (isProduction) "https://${conf.getHost()}" else "http://localhost:${conf.getOriginPort()}"
+    val origin =  conf.getOrigin()
     environment?.log?.info("Origin = $origin")
 
     intercept(ApplicationCallPipeline.Plugins) {

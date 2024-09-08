@@ -28,6 +28,14 @@ fun Route.manageParameterRoutes() {
             val param = call.receive<PostParameter>()
             log("avatarId = ${param.avatarId} parameterId = ${param.parameterId} name = ${param.name}")
             if (param.parameterId == null) {
+                if (param.name.length > 32) {
+                    call.respond(HttpStatusCode.BadRequest, "Parameter name cannot be longer than 32 characters.")
+                    return@tryPost
+                }
+                if (param.name.contains(" ")) {
+                    call.respond(HttpStatusCode.BadRequest, "Parameter name cannot contain whitespace.")
+                    return@tryPost
+                }
                 dao.insertParameter(userId(), param)
             } else {
                 dao.updateParameter(userId(), param)

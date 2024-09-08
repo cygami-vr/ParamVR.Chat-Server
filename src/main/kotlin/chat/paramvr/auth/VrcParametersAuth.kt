@@ -11,7 +11,6 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 import chat.paramvr.Crypto
 import chat.paramvr.conf
-import chat.paramvr.isProduction
 import chat.paramvr.tryPost
 import io.ktor.util.date.*
 import java.util.*
@@ -69,7 +68,7 @@ fun AuthenticationConfig.installVrcParametersAuth() {
                 sessions.set(user.newSession())
                 val quickAuthKey = UUID.randomUUID().toString()
 
-                response.cookies.append("Quick-Auth", quickAuthKey, maxAge = 2000000000L, secure = isProduction, httpOnly = true)
+                response.cookies.append("Quick-Auth", quickAuthKey, maxAge = 2000000000L, secure = conf.useSsl(), httpOnly = true)
 
                 dao.createQuickAuth(user, quickAuthKey)
                 user.failedLogins = 0

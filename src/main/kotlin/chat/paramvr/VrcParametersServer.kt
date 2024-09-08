@@ -22,10 +22,9 @@ import chat.paramvr.ws.wsRoutes
 import java.time.Duration
 
 val conf = AppConfig()
-val isProduction = conf.hasKeystore()
 
 fun main(args: Array<String>) {
-    if (isProduction) {
+    if (conf.isProduction()) {
         EngineMain.main(args)
     } else {
         val env = applicationEngineEnvironment {
@@ -42,12 +41,16 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
 
-    log.info("prod = $isProduction")
+    log.info("prod = ${conf.isProduction()}")
+
+    Runtime.getRuntime().addShutdownHook(Thread {
+        log.info("Server is exiting.")
+    })
 
     install(ContentNegotiation) {
         gson {
             serializeNulls()
-            if (!isProduction) {
+            if (!conf.isProduction()) {
                 setPrettyPrinting()
             }
         }
@@ -55,7 +58,7 @@ fun Application.module() {
 
     install(Sessions) {
         cookie<VrcParametersSession>("SESSION", storage = SessionStorageMemory()) {
-            cookie.secure = isProduction
+            cookie.secure = conf.useSsl()
         }
     }
 

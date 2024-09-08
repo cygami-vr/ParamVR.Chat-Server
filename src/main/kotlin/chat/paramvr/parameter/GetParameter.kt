@@ -1,7 +1,6 @@
 package chat.paramvr.parameter
 
 import chat.paramvr.conf
-import chat.paramvr.isProduction
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -31,7 +30,7 @@ open class ParameterWithImage(var parameterId: Long? = null) {
             val path = Paths.get("uploads/parameters").relativize(img)
                 .toString().replace('\\', '/')
 
-            return if (isProduction) "/f/parameter/$path" else "http://localhost:${conf.getPort()}/f/parameter/$path"
+            return if (conf.isProduction()) "/f/parameter/$path" else "http://localhost:${conf.getPort()}/f/parameter/$path"
         }
     }
 }

@@ -27,11 +27,21 @@ abstract class Config(private val path: Path) {
 
     fun getInt(prop: String) = props.getProperty(prop).toInt()
 
+    fun getBoolean(prop: String) = props.getProperty(prop).toBooleanStrict()
+
     fun getString(prop: String): String = props.getProperty(prop)
 
-    protected fun populate(prop: String, defaultValue: String, test: (prop: String) -> Boolean) {
+    protected fun populateInt(prop: String, defaultValue: Int)
+        = populate(prop, defaultValue.toString()) { it.toIntOrNull() != null }
+
+    protected fun populateBoolean(prop: String, defaultValue: Boolean)
+        = populate(prop, defaultValue.toString()) { it.toBooleanStrictOrNull() != null }
+
+    protected fun populateString(prop: String, defaultValue: String) = populate(prop, defaultValue, null)
+
+    protected fun populate(prop: String, defaultValue: String, test: ((prop: String) -> Boolean)?) {
         val obj = props.computeIfAbsent(prop) { defaultValue }
-        if (!test(obj.toString()))
+        if (test != null && !test(obj.toString()))
             props.setProperty(prop, defaultValue)
     }
 
@@ -42,14 +52,4 @@ abstract class Config(private val path: Path) {
             ex.printStackTrace()
         }
     }
-}
-
-fun String.testInt(): Boolean {
-    try {
-        this.toInt()
-    } catch (ex: NumberFormatException) {
-        ex.printStackTrace()
-        return false
-    }
-    return true
 }
