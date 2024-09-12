@@ -96,8 +96,10 @@ class ListenConnection(
         return param
     }
 
-    suspend fun setAvatar(avatarName: String) {
-        avatar = avatarDAO.retrieveAvatar(userId, name = avatarName)
+    suspend fun setAvatar(avatarIdOrName: String) {
+        avatar = if (avatarIdOrName.startsWith("avtr_"))
+            avatarDAO.retrieveAvatar(userId, vrcUuid = avatarIdOrName)
+            else avatarDAO.retrieveAvatar(userId, name = avatarIdOrName)
         log("New avatar = ${avatar?.name}")
         if (avatar != null) {
             avatarChanged()

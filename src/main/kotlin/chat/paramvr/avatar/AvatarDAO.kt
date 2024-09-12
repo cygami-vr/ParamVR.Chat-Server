@@ -35,7 +35,7 @@ class AvatarDAO: DAO() {
                 it.setLong(1, userId)
                 it.setString(2, name ?: vrcUuid)
                 val rs = it.executeQuery()
-                while (rs.next()) {
+                if (rs.next()) {
                     return Avatar(rs.getLong(1),
                         vrcUuid ?: rs.getString(2),
                         name ?: rs.getString(2))
