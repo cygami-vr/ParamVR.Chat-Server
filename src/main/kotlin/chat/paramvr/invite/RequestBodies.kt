@@ -1,5 +1,5 @@
 package chat.paramvr.invite
 
-data class PostInvite(val url: String?, val avatarId: Long, val expires: Long, val parameters: List<String>?)
+data class PostInvite(val url: String?, val expires: Long, val parameterIds: List<Long>?)
 
 data class DeleteInvite(val url: String)

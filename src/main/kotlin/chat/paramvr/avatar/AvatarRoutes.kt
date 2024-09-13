@@ -25,6 +25,8 @@ fun Route.avatarRoutes() {
             } else {
                 dao.updateAvatar(userId(), avatar)
             }
+            // Since UUID could have changed, we need to clear cache.
+            clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)
         }
         tryDelete {

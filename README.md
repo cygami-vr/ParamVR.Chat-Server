@@ -62,11 +62,9 @@ create table invite(
     id bigint primary key auto_increment,
     url char(8),
     user_id bigint not null,
-    avatar_id bigint not null,
     expires bigint,
     unique key (url),
-    foreign key (user_id) references user(id) on delete cascade,
-    foreign key (avatar_id) references avatar(id) on delete cascade
+    foreign key (user_id) references user(id) on delete cascade
 );
 
 alter table invite modify url char(8) character set latin1

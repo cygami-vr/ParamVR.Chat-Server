@@ -10,21 +10,20 @@ class InviteDAO: DAO() {
         val invites = mutableListOf<Invite>()
 
         connect().use { c ->
-            c.prepareStatement("select id, url, avatar_id, expires from invite where user_id = ?").use {
+            c.prepareStatement("select id, url, expires from invite where user_id = ?").use {
 
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
                 while (rs.next()) {
                     val id = rs.getLong(1)
                     val url = rs.getString(2)
-                    val avatarId = rs.getLong(3)
-                    val expires = rs.getLong(4)
-                    invites.add(Invite(id, url, avatarId, expires))
+                    val expires = rs.getLong(3)
+                    invites.add(Invite(id, url, expires))
                 }
             }
 
             invites.forEach { inv ->
-                c.prepareStatement("select p.id, p.name from invite i" +
+                c.prepareStatement("select p.id from invite i" +
                         " join invite_permission ip on i.id = ip.invite_id" +
                         " join parameter p on p.id = ip.parameter_id" +
                         " where url = ?").use {
@@ -33,9 +32,8 @@ class InviteDAO: DAO() {
                     val params = mutableListOf<Parameter>()
                     val rs = it.executeQuery()
                     while (rs.next()) {
-                        params.add(Parameter(rs.getLong(1), rs.getString(2)))
+                        inv.parameterIds += rs.getLong(1)
                     }
-                    inv.parameters += params
 
                 }
             }
@@ -59,11 +57,10 @@ class InviteDAO: DAO() {
         val inviteId: Long
 
         connect().use { c ->
-            c.prepareStatement("insert into invite(url, user_id, avatar_id, expires) values (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS).use {
+            c.prepareStatement("insert into invite(url, user_id, expires) values (?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS).use {
                 it.setString(1, urlBuilder.toString())
                 it.setLong(2, userId)
-                it.setLong(3, invite.avatarId)
-                it.setLong(4, invite.expires)
+                it.setLong(3, invite.expires)
                 it.executeUpdate()
                 val keys = it.generatedKeys
                 keys.next()
@@ -93,13 +90,12 @@ class InviteDAO: DAO() {
     }
 
     private fun insertInvitePermissions(userId: Long, invite: PostInvite, c: ConnectionWrapper, inviteId: Long) {
-        invite.parameters?.let { params ->
-            c.prepareStatement("insert into invite_permission(invite_id, parameter_id) values (?, (select id from parameter where name = ? and avatar_id = ? and user_id = ?))").use {
-                for (name in params) {
+        invite.parameterIds?.let { ids ->
+            c.prepareStatement("insert into invite_permission(invite_id, parameter_id) values (?, (select id from parameter where id = ? and user_id = ?))").use {
+                for (id in ids) {
                     it.setLong(1, inviteId)
-                    it.setString(2, name)
-                    it.setLong(3, invite.avatarId)
-                    it.setLong(4, userId)
+                    it.setLong(2, id)
+                    it.setLong(3, userId)
                     it.addBatch()
                 }
                 it.executeBatch()

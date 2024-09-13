@@ -19,17 +19,7 @@ fun Route.inviteRoutes() {
         tryGet {
             log("")
             val invites = dao.retrieveInvites(userId())
-            val getInvites = mutableListOf<GetInvite>()
-
-            invites.forEach { inv ->
-                val params = mutableListOf<String>()
-                inv.parameters.forEach {
-                    params.add(it.name)
-                }
-                getInvites += GetInvite(inv.url, inv.avatarId, inv.expires, params)
-            }
-
-            call.respond(getInvites)
+            call.respond(invites)
         }
         tryPost {
             val postInvite = call.receive<PostInvite>()

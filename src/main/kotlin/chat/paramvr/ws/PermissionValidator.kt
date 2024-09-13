@@ -97,7 +97,7 @@ class PermissionValidator(private val trigger: TriggerConnection) {
     fun canView(param: Parameter): Boolean {
         trigger.getListener()?.let {
             return if (param.requiresInvite) {
-                it.invites.validForParameter(trigger.getInviteId(), param.name)
+                it.invites.validForParameter(trigger.getInviteId(), param.parameterId)
             } else {
                 true
             }
