@@ -26,6 +26,14 @@ object Sockets {
 
     private const val CLIENT_PROTOCOL_VERSION = "0.2"
 
+    inline fun DefaultWebSocketServerSession.trace(s: String) {
+        if (call.application.environment.log.isTraceEnabled)
+            call.application.environment.log.trace(s)
+    }
+    inline fun DefaultWebSocketServerSession.debug(s: String) {
+        if (call.application.environment.log.isDebugEnabled)
+            call.application.environment.log.debug(s)
+    }
     inline fun DefaultWebSocketServerSession.log(s: String) = call.application.environment.log.info(s)
     inline fun DefaultWebSocketServerSession.warn(s: String) = call.application.environment.log.warn(s)
 
@@ -139,7 +147,7 @@ object Sockets {
                 con.lock(lock)
             } else if (msg.change != null) {
                 val change = msg.change
-                log("${con.targetUser} : Received ParameterChange ${change.name} = ${change.value}")
+                debug("${con.targetUser} : Received ParameterChange ${change.name} = ${change.value}")
 
                 if (change.name == "chat-paramvr-activity") {
                     con.checkActivity(change)

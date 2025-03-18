@@ -134,7 +134,7 @@ class ListenConnection(
 
     private suspend fun sendSensitiveParameter(param: Parameter, value: Any) {
 
-        log("Sending sensitive ${param.name} = $value")
+        debug("Sending sensitive ${param.name} = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", param.name)
         toSend.addProperty("type", "parameter")
@@ -148,7 +148,7 @@ class ListenConnection(
         }
     }
     suspend fun sendStatusParameter(name: String, value: Any?) {
-        log("Sending status $name = $value")
+        debug("Sending status $name = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", name)
         toSend.addProperty("type", "status")
@@ -177,7 +177,7 @@ class ListenConnection(
         val avatarChange = updates.find {
             it.asJsonObject.get("name").asString == "/avatar/change"
         }
-        log("Handling ${updates.size()} listener updates. Avatar changed = ${avatarChange != null}")
+        debug("Handling ${updates.size()} listener updates. Avatar changed = ${avatarChange != null}")
         avatarChange?.let {
             val uuid = it.asJsonObject.get("value").asString
             isPancake = true // will be overwritten later if false
@@ -197,7 +197,7 @@ class ListenConnection(
     private suspend fun handleUpdate(update: JsonObject) {
         var name = update.get("name").asString
         val value = update.get("value")
-        log("Handling update $name = $value")
+        debug("Handling update $name = $value")
         when (name) {
             "/avatar/change" -> {
                 // ignore, this was handled by the caller
@@ -228,7 +228,7 @@ class ListenConnection(
                 // Assume it is an avatar parameter
                 name = name.substring(19)
                 val param = getParams().find { it.name == name }
-                log("Mutating param $name to $value, DataType = ${param?.dataType}")
+                debug("Mutating param $name to $value, DataType = ${param?.dataType}")
 
                 param?.let {
                     DataType.parse(value, param.dataType)?.let {

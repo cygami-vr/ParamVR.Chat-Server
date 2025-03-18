@@ -8,6 +8,14 @@ import io.ktor.websocket.*
 
 abstract class Connection(val session: DefaultWebSocketServerSession, val targetUser: String) {
 
+    inline fun trace(s: String) {
+        if (session.application.environment.log.isTraceEnabled)
+            session.application.environment.log.trace("$targetUser : $s")
+    }
+    inline fun debug(s: String) {
+        if (session.application.environment.log.isDebugEnabled)
+            session.application.environment.log.debug("$targetUser : $s")
+    }
     inline fun log(s: String) = session.application.environment.log.info("$targetUser : $s")
     inline fun warn(s: String) = session.application.environment.log.warn("$targetUser : $s")
     inline fun error(s: String, t: Throwable) = session.application.environment.log.error("$targetUser : $s", t)

@@ -35,7 +35,7 @@ class TriggerConnection(
 
     fun listener(action: String): ListenConnection? {
         val listener = getListener()
-        log("Preparing to $action, Listener found = ${listener != null}")
+        debug("Preparing to $action, Listener found = ${listener != null}")
         return listener
     }
 
@@ -46,7 +46,7 @@ class TriggerConnection(
         // if someone is intentionally attempting to bypass that rate-limit.
         val time = System.currentTimeMillis()
         return if (time - lastTrigger < 75) {
-            log("Ignoring trigger due to spam")
+            debug("Ignoring trigger due to spam")
             true
         } else {
             lastTrigger = time
@@ -64,7 +64,7 @@ class TriggerConnection(
             val time = System.currentTimeMillis()
             if (time - it.lastActivityPing > 30000) {
                 it.lastActivityPing = time
-                log("Pinging activity")
+                debug("Pinging activity")
                 it.sendSerialized(param)
             }
         }
@@ -184,7 +184,7 @@ class TriggerConnection(
     private suspend fun sendGeneric(name: String, value: Any?, type: String) = sendGeneric(name, value, type, null)
 
     private suspend fun sendGeneric(name: String, value: Any?, type: String, parameterType: String?) {
-        log("Sending generic $name = $value")
+        debug("Sending generic $name = $value")
         val toSend = JsonObject()
         toSend.addProperty("name", name)
         setProperty(toSend, value)
