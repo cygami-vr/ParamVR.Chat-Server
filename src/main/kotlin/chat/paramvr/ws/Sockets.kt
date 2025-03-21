@@ -11,9 +11,12 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.util.*
 
-data class TriggerMessage(val lock: ParameterLock?, val change: ParameterChange?)
+data class TriggerMessage(val lock: ParameterLock?, val change: ParameterChange?, val vrcUuid: String?)
 data class ParameterLock(val name: String, val locked: Boolean)
 data class ParameterChange(val name: String, val value: String, val dataType: Short)
+data class ParameterChangeWrapped(val parameter: ParameterChange)
+data class AvatarChange(val vrcUuid: String)
+data class Parameters(val parameters: List<Parameter>)
 
 object Sockets {
 
@@ -24,7 +27,7 @@ object Sockets {
     val sessionDAO = TriggerSessionDAO()
     val parameterDAO = ParameterDAO()
 
-    private const val CLIENT_PROTOCOL_VERSION = "0.2"
+    private const val CLIENT_PROTOCOL_VERSION = "0.3"
 
     inline fun DefaultWebSocketServerSession.trace(s: String) {
         if (call.application.environment.log.isTraceEnabled)
@@ -154,6 +157,9 @@ object Sockets {
                 } else {
                     con.trigger(change)
                 }
+            } else if (msg.vrcUuid != null) {
+                debug("${con.targetUser} ?: Received AvatarChange to ${msg.vrcUuid}")
+                con.changeAvatar(msg.vrcUuid)
             } else {
                 warn("${con.targetUser} : TriggerMessage is empty")
             }

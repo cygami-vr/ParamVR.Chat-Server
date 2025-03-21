@@ -2,6 +2,7 @@ package chat.paramvr.ws
 
 import chat.paramvr.log
 import chat.paramvr.tryPost
+import chat.paramvr.ws.Sockets.getListener
 import chat.paramvr.ws.Sockets.sessionDAO
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -11,7 +12,7 @@ import io.ktor.server.routing.*
 import java.util.*
 
 data class TriggerHandshake(val target: String, val targetType: String, val clientId: String?)
-data class Trigger(val sessionId: String, val targetUser: String, val clientId: String)
+data class Trigger(val sessionId: String, val targetUser: String, val clientId: String, val changeableAvatars: Map<String, String>?)
 data class Invite(val id: Long, val targetUser: String)
 
 val dao = TriggerSessionDAO()
@@ -57,7 +58,8 @@ fun Route.wsRoutes() {
             body.clientId
         }
 
+        val changeableAvatars = getListener(targetUser)?.getChangeableAvas()
         val uuid = dao.insertTriggerSession(clientId, targetUser, inviteId)
-        call.respond(Trigger(uuid, targetUser, clientId))
+        call.respond(Trigger(uuid, targetUser, clientId, changeableAvatars))
     }
 }

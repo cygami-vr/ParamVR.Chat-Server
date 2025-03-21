@@ -20,6 +20,9 @@ class ListenConnection(
     var afk: Boolean? = null, private var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
     var lastActivityPing: Long = -1,
 
+    var changeableAvatars: MutableMap<String, String>? = null,
+    var lastAvatarChange: Long = -1,
+
     // Mutated params cannot be tracked as part of avatar params
     // because we need the mutated list to persist even when avatar params is overwritten.
     // If avatars share parameters, or if a parameter is unsaved on the avatar,
@@ -84,6 +87,21 @@ class ListenConnection(
         return avatarParams!!
     }
 
+    fun getChangeableAvas(): Map<String, String> {
+        if (changeableAvatars == null) {
+            changeableAvatars = mutableMapOf()
+            avatarDAO.retrieveAvatars(userId)
+                .filter { it.allowChange == "Y" }
+                .forEach { ava ->
+                    changeableAvatars?.let {
+                        it[ava.vrcUuid] = ava.name
+                    }
+                }
+            log("Updating changeable avatars with ${changeableAvatars?.size} avatars")
+        }
+        return changeableAvatars!!
+    }
+
     fun getParam(change: ParameterChange): Parameter? {
         val param = getParams().find { it.name == change.name }
         log("Getting parameter name = ${change.name}, Parameter found = ${param != null}")
@@ -125,7 +143,7 @@ class ListenConnection(
                 if (params.size != filtered.size) {
                     log("${params.size - filtered.size} parameters filtered out")
                 }
-                it.sendSerialized(filtered)
+                it.sendSerialized(Parameters(filtered))
             } else {
                 it.send(Frame.Text("[]"))
             }
@@ -164,6 +182,7 @@ class ListenConnection(
 
     private suspend fun avatarChanged() {
         sendStatusParameter("avatar", avatar?.name)
+        sendStatusParameter("avatarVrcUuid", avatar?.vrcUuid)
         sendStatusParameter("image", avatar?.image)
         sendStatusParameter("isPancake", isPancake)
         avatarParams = null // force sendParameters to update

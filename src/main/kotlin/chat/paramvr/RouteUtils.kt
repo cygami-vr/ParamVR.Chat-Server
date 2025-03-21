@@ -18,7 +18,9 @@ fun PipelineContext<Unit, ApplicationCall>.log(msg: String) {
 }
 
 fun PipelineContext<Unit, ApplicationCall>.clearListenerParamCache() {
-    getListener(vrcParametersSession().userName)?.avatarParams = null
+    val listener = getListener(vrcParametersSession().userName)
+    listener?.avatarParams = null
+    listener?.changeableAvatars = null
 }
 
 class MultipartFile(val id: Long?, val name: String?, val data: ByteArray?) {

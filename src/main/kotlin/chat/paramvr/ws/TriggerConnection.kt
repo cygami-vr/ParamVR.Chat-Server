@@ -75,7 +75,7 @@ class TriggerConnection(
             if (it.vrcOpen != false) {
                 val params = perms.filterViewable()
                 log("Sending ${params.size} parameters")
-                sendSerialized(params)
+                sendSerialized(Parameters(params))
             } else {
                 send(Frame.Text("[]"))
             }
@@ -113,9 +113,27 @@ class TriggerConnection(
         val result = perms.validate(change)
         if (result.valid) {
             log("Triggering ParameterChange ${change.name} = ${change.value}")
-            result.listener().sendSerialized(change)
+            result.listener().sendSerialized(ParameterChangeWrapped(change))
             if (result.parameter().type == ParameterType.BUTTON.id) {
                 result.listener().scheduleButtonMaxPress(result.parameter())
+            }
+        }
+    }
+
+    suspend fun changeAvatar(vrcUuid: String) {
+        listener("change avatar") {
+
+            // Validations:
+            // - Current avatar must have allow_change enabled
+            // - Target avatar must have allow_change enabled
+            // - Last avatar change (independent of who triggered it) was more than 30 seconds ago
+
+            if (it.avatar?.allowChange == "Y"
+                && it.getChangeableAvas().containsKey(vrcUuid)
+                && System.currentTimeMillis() - it.lastAvatarChange > 60_000) {
+
+                it.lastAvatarChange = System.currentTimeMillis()
+                it.sendSerialized(AvatarChange(vrcUuid))
             }
         }
     }
@@ -137,6 +155,7 @@ class TriggerConnection(
             status.addProperty("afk", listener.afk)
             status.addProperty("active", listener.isActive())
             status.addProperty("vrcOpen", listener.vrcOpen)
+            status.addProperty("avatarVrcUuid", listener.avatar?.vrcUuid)
 
             sendSerialized(obj)
         }
