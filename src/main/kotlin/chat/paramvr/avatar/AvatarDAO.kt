@@ -17,11 +17,11 @@ class AvatarDAO: DAO() {
     fun retrieveAvatars(userId: Long): List<Avatar> {
         val avatars = mutableListOf<Avatar>()
         connect().use { c ->
-            c.prepareStatement("select id, vrc_uuid, name from avatar where user_id = ?").use {
+            c.prepareStatement("select id, vrc_uuid, name, allow_change from avatar where user_id = ?").use {
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
                 while (rs.next()) {
-                    avatars += Avatar(rs.getLong(1), rs.getString(2), rs.getString(3))
+                    avatars += Avatar(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4))
                 }
             }
         }
@@ -30,7 +30,7 @@ class AvatarDAO: DAO() {
 
     fun retrieveAvatar(userId: Long, name: String? = null, vrcUuid: String? = null): Avatar? {
         connect().use { c ->
-            c.prepareStatement("select id, ${if (name == null) "name" else "vrc_uuid"}" +
+            c.prepareStatement("select id, ${if (name == null) "name" else "vrc_uuid"}, allow_change" +
                     " from avatar where user_id = ? and ${if (name == null) "vrc_uuid" else "name"} = ?").use {
                 it.setLong(1, userId)
                 it.setString(2, name ?: vrcUuid)
@@ -38,7 +38,7 @@ class AvatarDAO: DAO() {
                 if (rs.next()) {
                     return Avatar(rs.getLong(1),
                         vrcUuid ?: rs.getString(2),
-                        name ?: rs.getString(2))
+                        name ?: rs.getString(2), rs.getString(3))
                 }
             }
         }
@@ -58,11 +58,12 @@ class AvatarDAO: DAO() {
 
     fun updateAvatar(userId: Long, avatar: PostAvatar) {
         connect().use { c ->
-            c.prepareStatement("update avatar set vrc_uuid = ?, name = ? where id = ? and user_id = ?").use {
+            c.prepareStatement("update avatar set vrc_uuid = ?, name = ?, allow_change = ? where id = ? and user_id = ?").use {
                 it.setString(1, avatar.vrcUuid)
                 it.setString(2, avatar.name)
-                it.setLong(3, avatar.id!!)
-                it.setLong(4, userId)
+                it.setString(3, avatar.allowChange ?: "N")
+                it.setLong(4, avatar.id!!)
+                it.setLong(5, userId)
                 it.executeUpdate()
             }
         }

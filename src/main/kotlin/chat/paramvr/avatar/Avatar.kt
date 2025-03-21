@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class Avatar(val id: Long, val vrcUuid: String, val name: String) {
+class Avatar(val id: Long, val vrcUuid: String, val name: String, val allowChange: String) {
 
     val image = getHref(id)
 

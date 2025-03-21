@@ -26,6 +26,7 @@ create table avatar(
     user_id bigint,
     vrc_uuid varchar(41) not null,
     name varchar(64),
+    allow_change char(1) default 'N',
     unique key (user_id, name),
     unique key (user_id, vrc_uuid),
     foreign key (user_id) references user(id) on delete cascade
