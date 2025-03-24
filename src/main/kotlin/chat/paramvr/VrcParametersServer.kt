@@ -17,7 +17,9 @@ import chat.paramvr.avatar.basicAvatarRoutes
 import chat.paramvr.invite.inviteRoutes
 import chat.paramvr.parameter.basicParameterRoutes
 import chat.paramvr.parameter.manageParameterRoutes
+import chat.paramvr.usersettings.userSettingsRoutes
 import chat.paramvr.ws.Sockets.vrcParameterSockets
+import chat.paramvr.ws.TriggerSessionDAO
 import chat.paramvr.ws.wsRoutes
 import java.time.Duration
 
@@ -45,6 +47,7 @@ fun Application.module() {
 
     Runtime.getRuntime().addShutdownHook(Thread {
         log.info("Server is exiting.")
+        TriggerSessionDAO().deleteAllTriggerSessions()
     })
 
     install(ContentNegotiation) {
@@ -103,6 +106,7 @@ fun Application.module() {
             manageParameterRoutes()
             avatarRoutes()
             inviteRoutes()
+            userSettingsRoutes()
         }
 
         authenticate("Basic-ListenKey") {

@@ -8,6 +8,7 @@ import io.ktor.websocket.*
 import chat.paramvr.avatar.AvatarDAO
 import chat.paramvr.invite.Invite
 import chat.paramvr.parameter.DataType
+import chat.paramvr.usersettings.UserSettings
 import chat.paramvr.ws.Sockets.connections
 import chat.paramvr.ws.Sockets.parameterDAO
 import kotlinx.coroutines.*
@@ -18,9 +19,9 @@ class ListenConnection(
     session: DefaultWebSocketServerSession, targetUser: String, val userId: Long, var invites: List<Invite>,
     var avatar: Avatar? = null, var muted: Boolean? = null, var isPancake: Boolean? = null,
     var afk: Boolean? = null, private var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
-    var lastActivityPing: Long = -1,
+    var lastActivityPing: Long = -1, var settings: UserSettings? = null,
 
-    var changeableAvatars: MutableMap<String, String>? = null,
+    var changeableAvatars: List<Avatar>? = null,
     var lastAvatarChange: Long = -1,
 
     // Mutated params cannot be tracked as part of avatar params
@@ -87,16 +88,15 @@ class ListenConnection(
         return avatarParams!!
     }
 
-    fun getChangeableAvas(): Map<String, String> {
+    fun getChangeableAvas(): List<Avatar> {
         if (changeableAvatars == null) {
-            changeableAvatars = mutableMapOf()
+            val avas = mutableListOf<Avatar>()
             avatarDAO.retrieveAvatars(userId)
                 .filter { it.allowChange == "Y" }
                 .forEach { ava ->
-                    changeableAvatars?.let {
-                        it[ava.vrcUuid] = ava.name
-                    }
+                    avas += ava
                 }
+            changeableAvatars = avas
             log("Updating changeable avatars with ${changeableAvatars?.size} avatars")
         }
         return changeableAvatars!!
@@ -129,6 +129,7 @@ class ListenConnection(
         if (connected) {
             connections.target(targetUser).forEach {
                 it.sendLockedParams()
+                it.sendChangeableAvatars()
             }
         }
     }
@@ -165,12 +166,13 @@ class ListenConnection(
             }
         }
     }
+
     suspend fun sendStatusParameter(name: String, value: Any?) {
         debug("Sending status $name = $value")
         val toSend = JsonObject()
-        toSend.addProperty("name", name)
-        toSend.addProperty("type", "status")
-        setProperty(toSend, value)
+        val status = JsonObject()
+        setProperty(status, value, name)
+        toSend.add("status", status)
         sendJson(toSend)
     }
 
@@ -181,13 +183,27 @@ class ListenConnection(
     }
 
     private suspend fun avatarChanged() {
-        sendStatusParameter("avatar", avatar?.name)
-        sendStatusParameter("avatarVrcUuid", avatar?.vrcUuid)
-        sendStatusParameter("image", avatar?.image)
-        sendStatusParameter("isPancake", isPancake)
+        val toSend = JsonObject()
+        val status = JsonObject()
+        val avatarStatus = JsonObject()
+        avatarStatus.addProperty("name", avatar?.name)
+        avatarStatus.addProperty("vrcUuid", avatar?.vrcUuid)
+        avatarStatus.addProperty("image", avatar?.image)
+        avatarStatus.addProperty("allowChange", avatar?.allowChange)
+        status.add("avatar", avatarStatus)
+        status.addProperty("isPancake", isPancake)
+        settings?.let {
+            status.addProperty("avatarChangeCooldown", it.avatarChangeCooldown * 1000)
+            status.addProperty("colorPrimary", it.colorPrimary)
+        }
+        toSend.add("status", status)
+        sendJson(toSend)
         avatarParams = null // force sendParameters to update
         sendParameters()
         removeUnsavedMutatedParams()
+        connections.target(targetUser).forEach {
+            it.sendChangeableAvatars()
+        }
     }
 
     private suspend fun updateVrcOpen() = sendStatusParameter("vrcOpen", vrcOpen)

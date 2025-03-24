@@ -1,5 +1,7 @@
 package chat.paramvr.ws
 
+import chat.paramvr.avatar.Avatar
+import chat.paramvr.invite.validForAvatarChange
 import chat.paramvr.invite.validForParameter
 
 class ValidationResult(val valid: Boolean,
@@ -98,6 +100,17 @@ class PermissionValidator(private val trigger: TriggerConnection) {
         trigger.getListener()?.let {
             return if (param.requiresInvite) {
                 it.invites.validForParameter(trigger.getInviteId(), param.parameterId)
+            } else {
+                true
+            }
+        }
+        return false
+    }
+
+    fun canChange(avatar: Avatar): Boolean {
+        trigger.getListener()?.let {
+            return if (avatar.changeRequiresInvite == "Y") {
+                it.invites.validForAvatarChange(trigger.getInviteId(), avatar.id)
             } else {
                 true
             }

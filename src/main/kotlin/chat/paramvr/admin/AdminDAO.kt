@@ -1,15 +1,25 @@
 package chat.paramvr.admin
 
 import chat.paramvr.dao.DAO
+import java.sql.Statement
 
 class AdminDAO : DAO() {
 
     fun createUser(userName: String, salt: ByteArray, saltedHash: ByteArray) {
         connect().use { c ->
-            c.prepareStatement("insert into user(name, salt, salted_hash) values (?, ?, ?)").use {
+            val userId: Long
+            c.prepareStatement("insert into user(name, salt, salted_hash) values (?, ?, ?)", Statement.RETURN_GENERATED_KEYS).use {
                 it.setString(1, userName)
                 it.setBytes(2, salt)
                 it.setBytes(3, saltedHash)
+                it.executeUpdate()
+                val rs = it.generatedKeys
+                rs.next()
+                userId = rs.getLong(1)
+            }
+
+            c.prepareStatement("insert into user_settings(user_id) values(?)").use {
+                it.setLong(1, userId)
                 it.executeUpdate()
             }
         }

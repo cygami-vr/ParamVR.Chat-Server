@@ -84,4 +84,12 @@ class TriggerSessionDAO : DAO() {
             }
         }
     }
+
+    fun deleteAllTriggerSessions() {
+        connect().use { c ->
+            c.prepareStatement("delete from trigger_session").use {
+                it.executeUpdate()
+            }
+        }
+    }
 }

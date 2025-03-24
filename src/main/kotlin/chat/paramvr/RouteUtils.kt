@@ -17,8 +17,10 @@ fun PipelineContext<Unit, ApplicationCall>.log(msg: String) {
     call.application.environment.log.info("${call.request.httpMethod.value} ${call.request.uri} userId = $userId $msg")
 }
 
+fun PipelineContext<Unit, ApplicationCall>.getListener() = getListener(vrcParametersSession().userName)
+
 fun PipelineContext<Unit, ApplicationCall>.clearListenerParamCache() {
-    val listener = getListener(vrcParametersSession().userName)
+    val listener = getListener()
     listener?.avatarParams = null
     listener?.changeableAvatars = null
 }

@@ -48,7 +48,7 @@ object InviteExpirationHandler {
         ctx.log("Refreshing invite expiration scheduled commands.")
         futures.forEach { it.cancel(false) }
         listeners.forEach { con ->
-            con.invites = inviteDAO.retrieveInvites(con.userId)
+            con.invites = inviteDAO.retrieveMinimalInvites(con.userId)
             handleListener({ ctx.log(it) }, con)
         }
     }

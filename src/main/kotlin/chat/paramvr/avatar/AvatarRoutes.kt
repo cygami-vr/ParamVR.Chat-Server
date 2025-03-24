@@ -64,6 +64,7 @@ fun Route.avatarRoutes() {
                     }
 
                     scale(img.data!!, 512, path)
+                    clearListenerParamCache()
                     call.respond(HttpStatusCode.NoContent)
                 } else {
                     call.respond(HttpStatusCode.BadRequest)

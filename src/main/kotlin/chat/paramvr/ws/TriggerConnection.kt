@@ -9,6 +9,7 @@ import chat.paramvr.ws.Sockets.connections
 import chat.paramvr.ws.Sockets.getListener
 import chat.paramvr.ws.Sockets.parameterDAO
 import chat.paramvr.ws.Sockets.sessionDAO
+import com.google.gson.JsonArray
 
 data class TriggerSession(val uuid: String, val clientId: String, val targetUser: String, val inviteId: Long?)
 
@@ -121,19 +122,23 @@ class TriggerConnection(
     }
 
     suspend fun changeAvatar(vrcUuid: String) {
-        listener("change avatar") {
+        listener("change avatar") { listener ->
 
-            // Validations:
-            // - Current avatar must have allow_change enabled
-            // - Target avatar must have allow_change enabled
-            // - Last avatar change (independent of who triggered it) was more than 30 seconds ago
+            val canChange = perms.canChange(listener.avatar!!)
+            val allowChangeFrom = listener.avatar?.allowChange == "Y"
+            val allowChangeTo = listener.getChangeableAvas().any { it.vrcUuid == vrcUuid }
+            var offCooldown = false
+            listener.settings?.let {
+                offCooldown = System.currentTimeMillis() - listener.lastAvatarChange > it.avatarChangeCooldown * 1000
+            }
 
-            if (it.avatar?.allowChange == "Y"
-                && it.getChangeableAvas().containsKey(vrcUuid)
-                && System.currentTimeMillis() - it.lastAvatarChange > 60_000) {
+            log("Attempting to change avatar, " +
+                    "can change = $canChange, allow from = $allowChangeFrom, " +
+                    "allow to = $allowChangeTo, last change = ${listener.lastAvatarChange}")
 
-                it.lastAvatarChange = System.currentTimeMillis()
-                it.sendSerialized(AvatarChange(vrcUuid))
+            if (canChange && allowChangeFrom && allowChangeTo && offCooldown) {
+                listener.lastAvatarChange = System.currentTimeMillis()
+                listener.sendSerialized(AvatarChange(vrcUuid))
             }
         }
     }
@@ -145,17 +150,24 @@ class TriggerConnection(
             obj.addProperty("type", "status")
             obj.add("status", status)
 
-            status.addProperty("avatar", listener.avatar?.name)
-            listener.avatar?.id?.let {
-                status.addProperty("image", Avatar.getHref(it))
+            val avatar = JsonObject()
+            listener.avatar?.let {
+                avatar.addProperty("name", it.name)
+                avatar.addProperty("image", Avatar.getHref(it.id))
+                avatar.addProperty("vrcUuid", it.vrcUuid)
             }
+            status.add("avatar", avatar)
 
             status.addProperty("muted", listener.muted)
             status.addProperty("isPancake", listener.isPancake)
             status.addProperty("afk", listener.afk)
             status.addProperty("active", listener.isActive())
             status.addProperty("vrcOpen", listener.vrcOpen)
-            status.addProperty("avatarVrcUuid", listener.avatar?.vrcUuid)
+            listener.settings?.let {
+                status.addProperty("avatarChangeCooldown",
+                    it.avatarChangeCooldown * 1000 - (System.currentTimeMillis() - listener.lastAvatarChange))
+                status.addProperty("colorPrimary", it.colorPrimary)
+            }
 
             sendSerialized(obj)
         }
@@ -196,9 +208,43 @@ class TriggerConnection(
         }
     }
 
+    suspend fun sendChangeableAvatars() {
+        listener("send changeable avatars") { listener ->
+
+            val changeableAvatars = JsonObject()
+            val list = JsonArray()
+            // If missing the permission to change _to_ the current avatar,
+            // we will also prevent the connection from changing to other avatars.
+            val allowChange = listener.avatar?.allowChange == "Y"
+            val canChange = listener.avatar?.let { perms.canChange(it) } ?: false
+
+            if (allowChange && canChange) {
+                listener.getChangeableAvas().filter {
+                    listener.avatar?.vrcUuid != it.vrcUuid && perms.canChange(it)
+                }.forEach { ava ->
+                    val obj = JsonObject()
+                    obj.addProperty("vrcUuid", ava.vrcUuid)
+                    obj.addProperty("name", ava.name)
+                    obj.addProperty("image", ava.image)
+                    list.add(obj)
+                }
+            }
+
+            changeableAvatars.add("changeableAvatars", list)
+            sendSerialized(changeableAvatars)
+        }
+    }
+
     suspend fun sendGenericParameter(name: String, value: Any?) = sendGeneric(name, value, "parameter", "value")
 
-    suspend fun sendStatus(name: String, value: Any?) = sendGeneric(name, value, "status")
+    suspend fun sendStatus(name: String, value: Any?) {
+        debug("Sending status $name = $value")
+        val toSend = JsonObject()
+        val status = JsonObject()
+        setProperty(status, value, name)
+        toSend.add("status", status)
+        sendSerialized(toSend)
+    }
 
     private suspend fun sendGeneric(name: String, value: Any?, type: String) = sendGeneric(name, value, type, null)
 

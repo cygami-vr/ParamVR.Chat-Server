@@ -2,6 +2,7 @@ package chat.paramvr.ws
 
 import chat.paramvr.invite.InviteDAO
 import chat.paramvr.parameter.ParameterDAO
+import chat.paramvr.usersettings.UserSettingsDAO
 import com.google.gson.JsonArray
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
@@ -65,7 +66,8 @@ object Sockets {
                     listeners.removeIf { it.targetUser == targetUser }
                 }
 
-                val con = ListenConnection(this, targetUser.lowercase(), userId, inviteDAO.retrieveInvites(userId))
+                val con = ListenConnection(this, targetUser.lowercase(), userId, inviteDAO.retrieveMinimalInvites(userId))
+                con.settings = UserSettingsDAO().retrieveSettings(userId)
                 InviteExpirationHandler.handleListener(this, con)
                 listeners += con
 
@@ -121,6 +123,7 @@ object Sockets {
 
             if (listener != null) {
                 con.sendFullStatus()
+                con.sendChangeableAvatars()
                 con.checkActivity()
             }
 
@@ -133,6 +136,7 @@ object Sockets {
                 log("$targetUser : TriggerConnection closed")
                 sessionDAO.deleteTriggerSession(session.uuid)
             } catch (t: Throwable) {
+                sessionDAO.deleteTriggerSession(session.uuid)
                 con.logAndClose("Unexpected error in TriggerConnection", t)
             }
         }

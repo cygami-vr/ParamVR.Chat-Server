@@ -1,10 +1,7 @@
 package chat.paramvr.invite
 
+import chat.paramvr.*
 import chat.paramvr.auth.userId
-import chat.paramvr.log
-import chat.paramvr.tryDelete
-import chat.paramvr.tryGet
-import chat.paramvr.tryPost
 import chat.paramvr.ws.InviteExpirationHandler
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -30,6 +27,7 @@ fun Route.inviteRoutes() {
                 dao.updateInvite(userId(), postInvite)
             }
             InviteExpirationHandler.refresh(this)
+            clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)
         }
         tryDelete {
@@ -38,6 +36,12 @@ fun Route.inviteRoutes() {
             dao.deleteInvite(userId(), deleteInvite.url)
             InviteExpirationHandler.refresh(this)
             call.respond(HttpStatusCode.NoContent)
+        }
+        route("eligible") {
+            tryGet {
+                log("")
+                call.respond(dao.getEligible(userId()))
+            }
         }
     }
 }

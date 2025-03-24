@@ -10,6 +10,13 @@ create table user(
     listen_key varchar(36)
 );
 
+create table user_settings(
+    user_id bigint primary key,
+    avatar_change_cooldown smallint default 60,
+    color_primary char(6),
+    foreign key (user_id) references user(id) on delete cascade
+);
+
 # Makes the column case insensitive
 alter table user modify name varchar(16)
 character set latin1 collate latin1_general_ci null default null;
@@ -27,6 +34,7 @@ create table avatar(
     vrc_uuid varchar(41) not null,
     name varchar(64),
     allow_change char(1) default 'N',
+    change_requires_invite char(1) default 'N',
     unique key (user_id, name),
     unique key (user_id, vrc_uuid),
     foreign key (user_id) references user(id) on delete cascade
@@ -76,6 +84,13 @@ create table invite_permission(
     parameter_id bigint,
     foreign key (invite_id) references invite(id) on delete cascade,
     foreign key (parameter_id) references parameter(id) on delete cascade
+);
+
+create table invite_avatar_change(
+    invite_id bigint,
+    avatar_id bigint,
+    foreign key (invite_id) references invite(id) on delete cascade,
+    foreign key (avatar_id) references avatar(id) on delete cascade
 );
 
 create table parameter_value(
