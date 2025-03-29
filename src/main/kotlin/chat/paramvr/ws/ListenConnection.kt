@@ -42,7 +42,7 @@ class ListenConnection(
 
         // Update the parameters shown on the parameter trigger webpage.
         connections.target(targetUser).forEach {
-            it.send(Frame.Text("[]"))
+            it.sendSerialized(Parameters(emptyList()))
         }
 
         buttonJobs.values.forEach { it.cancel() }
@@ -146,7 +146,7 @@ class ListenConnection(
                 }
                 it.sendSerialized(Parameters(filtered))
             } else {
-                it.send(Frame.Text("[]"))
+                it.sendSerialized(Parameters(emptyList()))
             }
         }
     }
@@ -257,6 +257,9 @@ class ListenConnection(
                     vrcOpen = value.asBoolean
                     updateVrcOpen()
                     sendParameters()
+                    connections.target(targetUser).forEach {
+                        it.sendChangeableAvatars()
+                    }
                 }
             }
             else -> {

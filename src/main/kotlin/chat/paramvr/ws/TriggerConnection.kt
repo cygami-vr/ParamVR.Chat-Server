@@ -56,10 +56,10 @@ class TriggerConnection(
     }
 
     suspend fun checkActivity() {
-        checkActivity(ParameterChange("chat-paramvr-activity", "", 0))
+        checkActivity(ParameterChangeWrapped(ParameterChange("chat-paramvr-activity", "", 0)))
     }
 
-    suspend fun checkActivity(param: ParameterChange) {
+    suspend fun checkActivity(param: ParameterChangeWrapped) {
         listener("ping activity") {
             sendStatus("active", it.isActive())
             val time = System.currentTimeMillis()
@@ -78,7 +78,7 @@ class TriggerConnection(
                 log("Sending ${params.size} parameters")
                 sendSerialized(Parameters(params))
             } else {
-                send(Frame.Text("[]"))
+                sendSerialized(Parameters(emptyList()))
             }
         }
     }
@@ -213,20 +213,25 @@ class TriggerConnection(
 
             val changeableAvatars = JsonObject()
             val list = JsonArray()
-            // If missing the permission to change _to_ the current avatar,
-            // we will also prevent the connection from changing to other avatars.
-            val allowChange = listener.avatar?.allowChange == "Y"
-            val canChange = listener.avatar?.let { perms.canChange(it) } ?: false
 
-            if (allowChange && canChange) {
-                listener.getChangeableAvas().filter {
-                    listener.avatar?.vrcUuid != it.vrcUuid && perms.canChange(it)
-                }.forEach { ava ->
-                    val obj = JsonObject()
-                    obj.addProperty("vrcUuid", ava.vrcUuid)
-                    obj.addProperty("name", ava.name)
-                    obj.addProperty("image", ava.image)
-                    list.add(obj)
+            // Considering vrcOpen == null as true
+            if (listener.vrcOpen != false) {
+
+                // If missing the permission to change _to_ the current avatar,
+                // we will also prevent the connection from changing to other avatars.
+                val allowChange = listener.avatar?.allowChange == "Y"
+                val canChange = listener.avatar?.let { perms.canChange(it) } ?: false
+
+                if (allowChange && canChange) {
+                    listener.getChangeableAvas().filter {
+                        listener.avatar?.vrcUuid != it.vrcUuid && perms.canChange(it)
+                    }.forEach { ava ->
+                        val obj = JsonObject()
+                        obj.addProperty("vrcUuid", ava.vrcUuid)
+                        obj.addProperty("name", ava.name)
+                        obj.addProperty("image", ava.image)
+                        list.add(obj)
+                    }
                 }
             }
 

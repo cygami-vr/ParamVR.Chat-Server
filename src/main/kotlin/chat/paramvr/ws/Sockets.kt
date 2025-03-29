@@ -157,7 +157,7 @@ object Sockets {
                 debug("${con.targetUser} : Received ParameterChange ${change.name} = ${change.value}")
 
                 if (change.name == "chat-paramvr-activity") {
-                    con.checkActivity(change)
+                    con.checkActivity(ParameterChangeWrapped(change))
                 } else {
                     con.trigger(change)
                 }
