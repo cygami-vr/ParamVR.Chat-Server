@@ -144,32 +144,8 @@ class TriggerConnection(
     }
 
     suspend fun sendFullStatus() {
-        listener("send full status") { listener ->
-            val obj = JsonObject()
-            val status = JsonObject()
-            obj.addProperty("type", "status")
-            obj.add("status", status)
-
-            val avatar = JsonObject()
-            listener.avatar?.let {
-                avatar.addProperty("name", it.name)
-                avatar.addProperty("image", Avatar.getHref(it.id))
-                avatar.addProperty("vrcUuid", it.vrcUuid)
-            }
-            status.add("avatar", avatar)
-
-            status.addProperty("muted", listener.muted)
-            status.addProperty("isPancake", listener.isPancake)
-            status.addProperty("afk", listener.afk)
-            status.addProperty("active", listener.isActive())
-            status.addProperty("vrcOpen", listener.vrcOpen)
-            listener.settings?.let {
-                status.addProperty("avatarChangeCooldown",
-                    it.avatarChangeCooldown * 1000 - (System.currentTimeMillis() - listener.lastAvatarChange))
-                status.addProperty("colorPrimary", it.colorPrimary)
-            }
-
-            sendSerialized(obj)
+        listener("send full status") {
+            sendSerialized(it.getFullStatus())
         }
         sendMutatedParams()
         sendLockedParams()

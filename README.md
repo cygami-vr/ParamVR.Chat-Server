@@ -14,6 +14,9 @@ create table user_settings(
     user_id bigint primary key,
     avatar_change_cooldown smallint default 60,
     color_primary char(6),
+    color_secondary char(6),
+    dark_mode_color_primary char(6),
+    dark_mode_color_secondary char(6),
     foreign key (user_id) references user(id) on delete cascade
 );
 
@@ -35,6 +38,7 @@ create table avatar(
     name varchar(64),
     allow_change char(1) default 'N',
     change_requires_invite char(1) default 'N',
+    title varchar(64),
     unique key (user_id, name),
     unique key (user_id, vrc_uuid),
     foreign key (user_id) references user(id) on delete cascade

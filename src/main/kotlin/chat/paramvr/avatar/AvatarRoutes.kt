@@ -25,6 +25,11 @@ fun Route.avatarRoutes() {
             } else {
                 dao.updateAvatar(userId(), avatar)
             }
+            getListener()?.avatar?.let {
+                if (it.vrcUuid == avatar.vrcUuid) {
+                    it.title = avatar.title
+                }
+            }
             // Since UUID could have changed, we need to clear cache.
             clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)

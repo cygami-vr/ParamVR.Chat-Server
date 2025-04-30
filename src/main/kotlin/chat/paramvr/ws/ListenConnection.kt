@@ -182,22 +182,41 @@ class ListenConnection(
         }
     }
 
-    private suspend fun avatarChanged() {
-        val toSend = JsonObject()
+    private fun getStatus(): JsonObject {
+        val fullStatus = JsonObject()
         val status = JsonObject()
         val avatarStatus = JsonObject()
         avatarStatus.addProperty("name", avatar?.name)
         avatarStatus.addProperty("vrcUuid", avatar?.vrcUuid)
         avatarStatus.addProperty("image", avatar?.image)
         avatarStatus.addProperty("allowChange", avatar?.allowChange)
+        avatarStatus.addProperty("title", avatar?.title)
         status.add("avatar", avatarStatus)
         status.addProperty("isPancake", isPancake)
         settings?.let {
-            status.addProperty("avatarChangeCooldown", it.avatarChangeCooldown * 1000)
-            status.addProperty("colorPrimary", it.colorPrimary)
+            status.addProperty("avatarChangeCooldown",
+                it.avatarChangeCooldown * 1000 - (System.currentTimeMillis() - lastAvatarChange))
+            val colors = JsonObject()
+            colors.addProperty("colorPrimary", it.colorPrimary)
+            colors.addProperty("darkModeColorPrimary", it.darkModeColorPrimary)
+            status.add("colors", colors)
         }
-        toSend.add("status", status)
-        sendJson(toSend)
+        fullStatus.add("status", status)
+        return fullStatus
+    }
+
+    fun getFullStatus(): JsonObject {
+        val fullStatus = getStatus()
+        val status = fullStatus.getAsJsonObject("status")
+        status.addProperty("muted", muted)
+        status.addProperty("afk", afk)
+        status.addProperty("active", isActive())
+        status.addProperty("vrcOpen", vrcOpen)
+        return fullStatus
+    }
+
+    private suspend fun avatarChanged() {
+        sendJson(getStatus())
         avatarParams = null // force sendParameters to update
         sendParameters()
         removeUnsavedMutatedParams()
