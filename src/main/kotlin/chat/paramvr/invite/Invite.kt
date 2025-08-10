@@ -1,6 +1,6 @@
 package chat.paramvr.invite
 
-data class Invite(val id: Long, val url: String, val expires: Long,
+data class Invite(val id: Long, val url: String, val expires: Long, val allowMuteLock: Boolean,
                   var parameterIds: List<Long> = mutableListOf(),
                   var changeableAvatarIds: List<Long> = mutableListOf())
 

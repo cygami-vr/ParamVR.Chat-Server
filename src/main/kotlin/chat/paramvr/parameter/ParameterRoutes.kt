@@ -152,6 +152,7 @@ fun Route.basicParameterRoutes() {
             log("BASIC targetUser = $targetUser, userID = $userId")
             dao.unlockAll(userId)
             getListener(targetUser)?.let {
+                it.muteLockedByClientId = null
                 it.avatarParams = null // invalidate the cache
             }
             call.respond(HttpStatusCode.NoContent)

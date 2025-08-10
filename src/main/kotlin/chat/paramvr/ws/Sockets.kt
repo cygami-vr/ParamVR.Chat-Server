@@ -124,6 +124,7 @@ object Sockets {
             if (listener != null) {
                 con.sendFullStatus()
                 con.sendChangeableAvatars()
+                con.sendMuteLockStatus()
                 con.checkActivity()
             }
 
@@ -158,6 +159,8 @@ object Sockets {
 
                 if (change.name == "chat-paramvr-activity") {
                     con.checkActivity(ParameterChangeWrapped(change))
+                } else if (change.name == "chat-paramvr-mutelock") {
+                    con.muteLock(change.value == "true")
                 } else {
                     con.trigger(change)
                 }

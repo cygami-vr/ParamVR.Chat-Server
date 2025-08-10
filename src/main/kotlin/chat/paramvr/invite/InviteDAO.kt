@@ -10,7 +10,7 @@ class InviteDAO: DAO() {
         val invites = mutableListOf<Invite>()
 
         connect().use { c ->
-            c.prepareStatement("select id, url, expires from invite where user_id = ?").use {
+            c.prepareStatement("select id, url, expires, allow_mute_lock from invite where user_id = ?").use {
 
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
@@ -18,7 +18,8 @@ class InviteDAO: DAO() {
                     val id = rs.getLong(1)
                     val url = rs.getString(2)
                     val expires = rs.getLong(3)
-                    invites.add(Invite(id, url, expires))
+                    val allowMuteLock = rs.getString(4) == "Y"
+                    invites.add(Invite(id, url, expires, allowMuteLock))
                 }
             }
 
@@ -56,7 +57,7 @@ class InviteDAO: DAO() {
         val invites = mutableListOf<GetInvite>()
 
         connect().use { c ->
-            c.prepareStatement("select id, url, expires from invite where user_id = ?").use {
+            c.prepareStatement("select id, url, expires, allow_mute_lock from invite where user_id = ?").use {
 
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
@@ -64,7 +65,8 @@ class InviteDAO: DAO() {
                     val id = rs.getLong(1)
                     val url = rs.getString(2)
                     val expires = rs.getLong(3)
-                    invites.add(GetInvite(id, url, expires))
+                    val allowMuteLock = rs.getString(4) == "Y"
+                    invites.add(GetInvite(id, url, expires, allowMuteLock))
                 }
             }
 
@@ -137,6 +139,11 @@ class InviteDAO: DAO() {
                 val rs = it.executeQuery()
                 rs.next()
                 inviteId = rs.getLong(1)
+            }
+            c.prepareStatement("update invite set allow_mute_lock = ? where id = ?").use {
+                it.setString(1, if (invite.allowMuteLock) "Y" else "N")
+                it.setLong(2, inviteId)
+                it.executeUpdate()
             }
             c.prepareStatement("delete from invite_permission where invite_id = ?").use {
                 it.setLong(1, inviteId)

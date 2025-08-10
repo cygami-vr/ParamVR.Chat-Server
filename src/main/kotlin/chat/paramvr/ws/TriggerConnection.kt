@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import chat.paramvr.avatar.Avatar
+import chat.paramvr.invite.findId
 import chat.paramvr.parameter.ParameterType
 import chat.paramvr.ws.Sockets.connections
 import chat.paramvr.ws.Sockets.getListener
@@ -97,6 +98,28 @@ class TriggerConnection(
             if (valid) {
                 result.parameter().lockedByClientId = if (lock.locked) getClientId() else null
                 propagateLock(result.parameter(), lock)
+            }
+        }
+    }
+
+    suspend fun muteLock(muteLock: Boolean) {
+
+        listener("validate mute lock")?.let { listener ->
+
+            val allowMuteLock = listener.invites.findId(getInviteId())?.allowMuteLock ?: false
+            val lockAvailable = listener.muteLockedByClientId == null || getClientId() == listener.muteLockedByClientId
+
+            log("Checking mute lock perms. Allowed = ${allowMuteLock}," +
+                    " Invite ID = ${getInviteId()}," +
+                    " Locked by = ${listener.muteLockedByClientId}," +
+                    " Client ID = ${getClientId()}")
+
+            if (allowMuteLock && lockAvailable) {
+                listener.muteLockedByClientId = if (muteLock) getClientId() else null
+                listener.sendSerialized(ParameterChangeWrapped(ParameterChange("chat-paramvr-mutelock", if (muteLock) "true" else "false", 0)))
+                connections.target(targetUser).forEach {
+                    it.sendMuteLockStatus()
+                }
             }
         }
     }
@@ -213,6 +236,16 @@ class TriggerConnection(
 
             changeableAvatars.add("changeableAvatars", list)
             sendSerialized(changeableAvatars)
+        }
+    }
+
+    suspend fun sendMuteLockStatus() {
+        listener("send mute lock status") { listener ->
+            // Only send mute lock status if the trigger connection has mute lock perms.
+            if (listener.invites.findId(getInviteId())?.allowMuteLock == true) {
+                sendStatus("muteLocked", listener.muteLockedByClientId != null)
+                sendStatus("muteLockedByOther", listener.muteLockedByClientId != null && listener.muteLockedByClientId != getClientId())
+            }
         }
     }
 

@@ -76,6 +76,7 @@ create table invite(
     url char(8),
     user_id bigint not null,
     expires bigint,
+    allow_mute_lock char(1) default 'N',
     unique key (url),
     foreign key (user_id) references user(id) on delete cascade
 );
