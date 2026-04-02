@@ -95,11 +95,11 @@ fun Application.module() {
     val origin =  conf.getOrigin()
     environment.log.info("Origin = $origin")
 
-    install(CORS) {
-        allowHost(origin, listOf(if (conf.isProduction()) "https" else "http"))
-        if (!conf.isProduction()) {
-            allowHeader(HttpHeaders.ContentType)
+    if (!conf.isProduction()) {
+        install(CORS) {
+            allowHost(origin, listOf(if (conf.isProduction()) "https" else "http"))
             allowCredentials = true
+            allowHeader(HttpHeaders.ContentType)
             allowMethod(HttpMethod.Options)
             allowMethod(HttpMethod.Get)
             allowMethod(HttpMethod.Post)
@@ -143,14 +143,5 @@ fun Application.module() {
 
         vrcParameterSockets()
         wsRoutes()
-
-        if (!conf.isProduction()) {
-            options("/{url...}") {
-                call.request.headers["Access-Control-Request-Method"]?.let {
-                    call.response.header("Access-Control-Allow-Methods", it)
-                }
-                call.respond(HttpStatusCode.OK)
-            }
-        }
     }
 }

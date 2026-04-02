@@ -11,11 +11,19 @@ import io.ktor.util.*
 import chat.paramvr.Crypto
 import chat.paramvr.conf
 import chat.paramvr.tryPost
+import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.util.date.*
 import java.util.*
 import kotlin.text.toCharArray
 
 private val dao = SessionAuthDAO()
+private val targetUserKey = AttributeKey<String>("target-user")
+private val userIdKey = AttributeKey<Long>("user-id")
+
+fun RoutingContext.listenTargetUser() = call.attributes[targetUserKey]
+fun RoutingContext.listenUserId() = call.attributes[userIdKey]
+fun DefaultWebSocketServerSession.listenTargetUser() = call.attributes[targetUserKey]
+fun DefaultWebSocketServerSession.listenUserId() = call.attributes[userIdKey]
 
 fun AuthenticationConfig.installVrcParametersAuth() {
     basic(name = "Basic-ListenKey") {
@@ -31,8 +39,8 @@ fun AuthenticationConfig.installVrcParametersAuth() {
                 return@validate null
             }
 
-            request.call.attributes.put(AttributeKey("target-user"), targetUser)
-            request.call.attributes.put(AttributeKey("user-id"), authUser.id)
+            request.call.attributes.put(targetUserKey, targetUser)
+            request.call.attributes.put(userIdKey, authUser.id)
             UserIdPrincipal(targetUser)
         }
     }

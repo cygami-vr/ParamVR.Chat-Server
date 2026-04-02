@@ -1,5 +1,7 @@
 package chat.paramvr.ws
 
+import chat.paramvr.auth.listenTargetUser
+import chat.paramvr.auth.listenUserId
 import chat.paramvr.invite.InviteDAO
 import chat.paramvr.parameter.ParameterDAO
 import chat.paramvr.usersettings.UserSettingsDAO
@@ -47,8 +49,8 @@ object Sockets {
         authenticate("Basic-ListenKey") {
             webSocket("/parameter-listen") {
 
-                val targetUser = call.attributes[AttributeKey("target-user")] as String
-                val userId = call.attributes[AttributeKey("user-id")] as Long
+                val targetUser = listenTargetUser()
+                val userId = listenUserId()
 
                 send(Frame.Text(CLIENT_PROTOCOL_VERSION))
                 val protocol = (incoming.receive() as Frame.Text).readText()

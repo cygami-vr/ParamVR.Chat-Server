@@ -4,6 +4,7 @@ import chat.paramvr.log
 import chat.paramvr.tryPost
 import chat.paramvr.ws.Sockets.sessionDAO
 import io.ktor.http.*
+import io.ktor.server.application.log
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -16,7 +17,7 @@ data class Invite(val id: Long, val targetUser: String, val allowMuteLock: Boole
 val dao = TriggerSessionDAO()
 
 fun Route.wsRoutes() {
-    tryPost("trigger-connect") {
+    tryPost("/trigger-connect") {
         val body = call.receive<TriggerHandshake>()
         log("clientId = ${body.clientId} target = ${body.target}")
         val targetUser: String

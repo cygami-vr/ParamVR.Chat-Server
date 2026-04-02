@@ -1,6 +1,8 @@
 package chat.paramvr.parameter
 
 import chat.paramvr.*
+import chat.paramvr.auth.listenTargetUser
+import chat.paramvr.auth.listenUserId
 import chat.paramvr.auth.userId
 import chat.paramvr.ws.Sockets.getListener
 import io.ktor.http.*
@@ -130,8 +132,8 @@ fun Route.manageParameterRoutes() {
 fun Route.basicParameterRoutes() {
     route ("parameter") {
         tryPost {
-            val userId = call.attributes[AttributeKey("user-id")] as Long
-            val targetUser = call.attributes[AttributeKey("target-user")] as String
+            val userId = listenUserId()
+            val targetUser = listenTargetUser()
 
             val listener = getListener(targetUser)
             val avatarId = listener?.avatar?.id
@@ -153,8 +155,8 @@ fun Route.basicParameterRoutes() {
             call.respond(HttpStatusCode.NoContent)
         }
         tryPost("emergency-unlock") {
-            val userId = call.attributes[AttributeKey("user-id")] as Long
-            val targetUser = call.attributes[AttributeKey("target-user")] as String
+            val userId = listenUserId()
+            val targetUser = listenTargetUser()
             log("BASIC targetUser = $targetUser, userID = $userId")
             dao.unlockAll(userId)
             getListener(targetUser)?.let {

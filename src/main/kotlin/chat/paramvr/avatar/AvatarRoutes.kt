@@ -1,6 +1,7 @@
 package chat.paramvr.avatar
 
 import chat.paramvr.*
+import chat.paramvr.auth.listenUserId
 import chat.paramvr.auth.userId
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -89,7 +90,7 @@ fun Route.avatarRoutes() {
 fun Route.basicAvatarRoutes() {
     route ("avatar") {
         tryPost {
-            val userId = call.attributes[AttributeKey("user-id")] as Long
+            val userId = listenUserId()
             val toInsert = call.receive<PostAvatar>()
             log("BASIC avatarId = ${toInsert.id} avatarName = ${toInsert.name}")
             dao.insertAvatar(userId, toInsert)

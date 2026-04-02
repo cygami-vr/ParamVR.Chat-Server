@@ -1,5 +1,6 @@
 package chat.paramvr
 
+import chat.paramvr.auth.listenTargetUser
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -10,7 +11,7 @@ import java.nio.file.Paths
 fun Route.uploadLogRoute() {
     tryPost("/log") {
 
-        val targetUser = call.attributes[AttributeKey("target-user")] as String
+        val targetUser = listenTargetUser()
         val log = receiveMultipartFile()
 
         log("$targetUser : Handling upload for Log ${log.name}")
