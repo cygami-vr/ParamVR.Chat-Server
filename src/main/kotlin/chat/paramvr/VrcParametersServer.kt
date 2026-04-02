@@ -21,7 +21,16 @@ import chat.paramvr.usersettings.userSettingsRoutes
 import chat.paramvr.ws.Sockets.vrcParameterSockets
 import chat.paramvr.ws.TriggerSessionDAO
 import chat.paramvr.ws.wsRoutes
-import java.time.Duration
+import io.ktor.http.CacheControl
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.CachingOptions
+import io.ktor.server.plugins.cachingheaders.CachingHeaders
+import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import java.io.File
+import kotlin.time.Duration.Companion.minutes
 
 val conf = AppConfig()
 
@@ -29,15 +38,19 @@ fun main(args: Array<String>) {
     if (conf.isProduction()) {
         EngineMain.main(args)
     } else {
-        val env = applicationEngineEnvironment {
-            developmentMode = true
-            module { module() }
-            connector {
-                host = "0.0.0.0"
-                port = conf.getPort()
+        embeddedServer(
+            Netty,
+            serverConfig {
+                developmentMode = true
+                module(Application::module)
+            },
+            configure = {
+                connector {
+                    host = "0.0.0.0"
+                    port = conf.getPort()
+                }
             }
-        }
-        embeddedServer(Netty, env).start(true)
+        ).start(wait = true)
     }
 }
 
@@ -71,35 +84,44 @@ fun Application.module() {
 
     install(WebSockets) {
         contentConverter = GsonWebsocketContentConverter()
-        timeout = Duration.ofMinutes(5)
+        timeout = 5.minutes
         maxFrameSize = 1024 * 1024 * 1024 // 1 MiB
+    }
+
+    install(DefaultHeaders) {
+        header("X-Frame-Options", "DENY")
+    }
+
+    val origin =  conf.getOrigin()
+    environment.log.info("Origin = $origin")
+
+    install(CORS) {
+        allowHost(origin, listOf(if (conf.isProduction()) "https" else "http"))
+        if (!conf.isProduction()) {
+            allowHeader(HttpHeaders.ContentType)
+            allowCredentials = true
+            allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Get)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Delete)
+        }
+    }
+
+    install(CachingHeaders) {
+        options { _, _ ->
+            CachingOptions(
+                CacheControl.NoStore(CacheControl.Visibility.Private)
+            )
+        }
     }
 
     routing {
 
-        static("/") {
-            files("public")
-            default("public/index.html")
-        }
-
-        static("/p/{targetUser}") {
-            files("public")
-            default("public/index.html")
-        }
-
-        static("/nv/{invite}") {
-            files("public")
-            default("public/index.html")
-        }
-
-        static("/f/avatar") {
-            files("uploads/avatars")
-        }
-        static("/f/parameter") {
-            files("uploads/parameters")
-        }
-
-        corsRouting()
+        staticFiles("/", File("public"))
+        staticFiles("/p/{targetUser}", File("public"))
+        staticFiles("/nv/{invite}", File("public"))
+        staticFiles("/f/avatar", File("uploads/avatars"))
+        staticFiles("/f/parameter", File("uploads/parameters"))
 
         authenticate("Form") {
             authRoutes()
@@ -121,5 +143,14 @@ fun Application.module() {
 
         vrcParameterSockets()
         wsRoutes()
+
+        if (!conf.isProduction()) {
+            options("/{url...}") {
+                call.request.headers["Access-Control-Request-Method"]?.let {
+                    call.response.header("Access-Control-Allow-Methods", it)
+                }
+                call.respond(HttpStatusCode.OK)
+            }
+        }
     }
 }

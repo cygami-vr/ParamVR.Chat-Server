@@ -1,7 +1,6 @@
 package chat.paramvr
 
-import io.ktor.server.application.*
-import io.ktor.util.pipeline.*
+import io.ktor.server.routing.RoutingContext
 import java.awt.MediaTracker
 import java.awt.Panel
 import java.awt.Toolkit
@@ -9,7 +8,7 @@ import java.awt.image.BufferedImage
 import java.nio.file.Path
 import javax.imageio.ImageIO
 
-fun PipelineContext<Unit, ApplicationCall>.scale(imgData: ByteArray, maxSize: Int, dest: Path) {
+fun RoutingContext.scale(imgData: ByteArray, maxSize: Int, dest: Path) {
 
     // Toolkit gets colors correct more often than ImageIO
     val img = Toolkit.getDefaultToolkit().createImage(imgData)

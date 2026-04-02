@@ -39,9 +39,7 @@ abstract class DAO {
         fun closeConnection() {
             try {
                 connection.close()
-            } catch (t: Throwable) {
-                // ignore
-            }
+            } catch (_: Exception) {}
         }
     }
 

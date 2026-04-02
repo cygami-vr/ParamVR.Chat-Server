@@ -5,21 +5,20 @@ import chat.paramvr.auth.vrcParametersSession
 import chat.paramvr.ws.Sockets.getListener
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
-import io.ktor.util.pipeline.*
+import io.ktor.utils.io.toByteArray
 
-fun PipelineContext<Unit, ApplicationCall>.log(msg: String) {
+fun RoutingContext.log(msg: String) {
     val userId = call.sessions.get<VrcParametersSession>()?.userId
     call.application.environment.log.info("${call.request.httpMethod.value} ${call.request.uri} userId = $userId $msg")
 }
 
-fun PipelineContext<Unit, ApplicationCall>.getListener() = getListener(vrcParametersSession().userName)
+fun RoutingContext.getListener() = getListener(vrcParametersSession().userName)
 
-fun PipelineContext<Unit, ApplicationCall>.clearListenerParamCache() {
+fun RoutingContext.clearListenerParamCache() {
     val listener = getListener()
     listener?.avatarParams = null
     listener?.changeableAvatars = null
@@ -30,7 +29,7 @@ class MultipartFile(val id: Long?, val name: String?, val data: ByteArray?) {
     fun hasData() = id != null && name != null
 }
 
-suspend fun PipelineContext<Unit, ApplicationCall>.receiveMultipartFile(): MultipartFile {
+suspend fun RoutingContext.receiveMultipartFile(): MultipartFile {
 
     var id: Long? = null
     var fileName: String? = null
@@ -43,7 +42,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.receiveMultipartFile(): Multi
             }
             is PartData.FileItem -> {
                 fileName = it.originalFileName
-                fileBytes = it.streamProvider().readBytes()
+                fileBytes = it.provider().toByteArray()
             }
             else -> {
                 call.application.environment.log.warn("Unhandled multipart type for $it")
@@ -54,68 +53,68 @@ suspend fun PipelineContext<Unit, ApplicationCall>.receiveMultipartFile(): Multi
     return MultipartFile(id, fileName, fileBytes)
 }
 
-suspend fun PipelineContext<Unit, ApplicationCall>.handleThrowable(t: Throwable) {
+suspend fun RoutingContext.handleThrowable(t: Throwable) {
     val userId = call.sessions.get<VrcParametersSession>()?.userId
     call.application.environment.log.error("Uncaught throwable in route ${call.request.httpMethod.value} ${call.request.uri} userId = $userId", t)
     call.respond(HttpStatusCode.InternalServerError)
 }
 
-fun Route.tryGet(body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
+fun Route.tryGet(body: suspend RoutingContext.() -> Unit): Route {
     return get {
         try {
-            body.invoke(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }
 
-fun Route.tryGet(route: String, body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
+fun Route.tryGet(route: String, body: suspend RoutingContext.() -> Unit): Route {
     return get(route) {
         try {
-            body.invoke(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }
 
-fun Route.tryPost(body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
-    return post() {
+fun Route.tryPost(body: suspend RoutingContext.() -> Unit): Route {
+    return post {
         try {
-            body(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }
 
-fun Route.tryPost(route: String, body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
+fun Route.tryPost(route: String, body: suspend RoutingContext.() -> Unit): Route {
     return post(route) {
         try {
-            body(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }
 
-fun Route.tryDelete(body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
-    return delete() {
+fun Route.tryDelete(body: suspend RoutingContext.() -> Unit): Route {
+    return delete {
         try {
-            body(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }
 
-fun Route.tryDelete(route: String, body: suspend PipelineContext<Unit, ApplicationCall>.(Unit) -> Unit): Route {
+fun Route.tryDelete(route: String, body: suspend RoutingContext.() -> Unit): Route {
     return delete(route) {
         try {
-            body(this, Unit)
-        } catch (t: Throwable) {
-            handleThrowable(t)
+            body()
+        } catch (ex: Exception) {
+            handleThrowable(ex)
         }
     }
 }

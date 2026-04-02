@@ -4,7 +4,6 @@ import chat.paramvr.*
 import chat.paramvr.auth.userId
 import chat.paramvr.ws.Sockets.getListener
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -77,10 +76,17 @@ fun Route.manageParameterRoutes() {
                 call.respond(HttpStatusCode.NoContent)
             }
         }
-        tryPost("/order") {
+        tryPost("order") {
             val body = call.receive<PostParameterOrder>()
             log("") // This is intentional, it is just to get the default logged info
             dao.updateParameterOrder(userId(), body.parameterIds)
+            clearListenerParamCache()
+            call.respond(HttpStatusCode.NoContent)
+        }
+        tryPost("copy") {
+            val body = call.receive<CopyFromAvatar>()
+            log("body = $body")
+            dao.copyAvatarParameters(userId(), body.fromAvatarId, body.toAvatarId)
             clearListenerParamCache()
             call.respond(HttpStatusCode.NoContent)
         }

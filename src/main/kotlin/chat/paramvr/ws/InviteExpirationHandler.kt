@@ -4,9 +4,8 @@ import chat.paramvr.invite.InviteDAO
 import chat.paramvr.log
 import chat.paramvr.ws.Sockets.listeners
 import chat.paramvr.ws.Sockets.log
-import io.ktor.server.application.*
+import io.ktor.server.routing.RoutingContext
 import io.ktor.server.websocket.*
-import io.ktor.util.pipeline.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -44,7 +43,7 @@ object InviteExpirationHandler {
         }
     }
 
-    fun refresh(ctx: PipelineContext<Unit, ApplicationCall>) {
+    fun refresh(ctx: RoutingContext) {
         ctx.log("Refreshing invite expiration scheduled commands.")
         futures.forEach { it.cancel(false) }
         listeners.forEach { con ->

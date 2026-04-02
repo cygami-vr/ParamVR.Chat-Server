@@ -1,8 +1,6 @@
 package chat.paramvr.admin
 
 import chat.paramvr.Crypto
-import java.nio.file.Files
-import java.nio.file.Paths
 
 object Admin {
     private val adminDAO = AdminDAO()
@@ -10,7 +8,7 @@ object Admin {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.isEmpty()) {
-            println("Missing action argument (user, genJnlpJarElements, signJars)")
+            println("Missing action argument (user)")
             return
         }
         when (args[0].lowercase()) {
@@ -36,12 +34,6 @@ object Admin {
                         println("Unknown user sub-action argument ${args[1]}")
                     }
                 }
-            }
-            "genjnlpjarelements" -> {
-                genJnlpJarElements()
-            }
-            "signjars" -> {
-                signJars(args)
             }
             else -> {
                 println("Unknown action argument ${args[0]}")
@@ -84,35 +76,5 @@ object Admin {
         val hash = Crypto.hash(password.toCharArray(), salt)
 
         adminDAO.updateUserCredentials(userName, salt, hash)
-    }
-
-    private fun getClientLibPath(): String {
-        val userHome = System.getProperty("user.home")
-        println("User home = $userHome")
-        return "$userHome\\IdeaProjects\\vrcparameters-client\\build\\install\\vrcparameters-client\\lib"
-    }
-
-    private fun clientLibPaths() = Files.list(Paths.get(getClientLibPath()))
-
-    private fun genJnlpJarElements() {
-        clientLibPaths().forEach {
-            println("<jar href=\"lib/${it.fileName}\" />")
-        }
-    }
-
-    private fun signJars(args: Array<String>) {
-        if (args.size < 4) {
-            println("Missing signJars arguments (JAVA_HOME, Key Store Path, Key Store Password)")
-            return
-        }
-
-        val lib = getClientLibPath()
-
-        clientLibPaths().forEach {
-            val cmd = "\"${args[1]}\\bin\\jarsigner\" $lib\\${it.fileName} *.paramvr.chat -keystore \"${args[2]}\" -storepass ${args[3]}"
-            val process = Runtime.getRuntime().exec(cmd)
-            val ret = process.waitFor()
-            println("Signed ${it.fileName} ret = $ret")
-        }
     }
 }

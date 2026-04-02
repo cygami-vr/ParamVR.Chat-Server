@@ -30,16 +30,16 @@ object Sockets {
 
     private const val CLIENT_PROTOCOL_VERSION = "0.3"
 
-    inline fun DefaultWebSocketServerSession.trace(s: String) {
+    fun DefaultWebSocketServerSession.trace(s: String) {
         if (call.application.environment.log.isTraceEnabled)
             call.application.environment.log.trace(s)
     }
-    inline fun DefaultWebSocketServerSession.debug(s: String) {
+    fun DefaultWebSocketServerSession.debug(s: String) {
         if (call.application.environment.log.isDebugEnabled)
             call.application.environment.log.debug(s)
     }
-    inline fun DefaultWebSocketServerSession.log(s: String) = call.application.environment.log.info(s)
-    inline fun DefaultWebSocketServerSession.warn(s: String) = call.application.environment.log.warn(s)
+    fun DefaultWebSocketServerSession.log(s: String) = call.application.environment.log.info(s)
+    fun DefaultWebSocketServerSession.warn(s: String) = call.application.environment.log.warn(s)
 
     fun getListener(targetUser: String) = listeners.target(targetUser.lowercase()).firstOrNull()
     fun Route.vrcParameterSockets() {
@@ -79,7 +79,7 @@ object Sockets {
                         val updates = receiveDeserialized<JsonArray>()
                         con.handleListenerUpdates(updates)
                     }
-                } catch (e: ClosedReceiveChannelException) {
+                } catch (_: ClosedReceiveChannelException) {
                     listeners.removeIf { it === con }
                     log("$targetUser : ListenConnection closed")
                     con.notifyConnected(false)
@@ -132,7 +132,7 @@ object Sockets {
                 while (true) {
                     receiveTriggerMessage(con)
                 }
-            } catch (e: ClosedReceiveChannelException) {
+            } catch (_: ClosedReceiveChannelException) {
                 connections.removeIf { it === con }
                 log("$targetUser : TriggerConnection closed")
                 sessionDAO.deleteTriggerSession(session.uuid)

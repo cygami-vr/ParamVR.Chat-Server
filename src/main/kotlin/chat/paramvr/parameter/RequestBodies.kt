@@ -19,3 +19,5 @@ fun PostParameterValue.requiresInvite() = if (requiresInvite == "Y" || requiresI
 data class DeleteParameterValue(val parameterId: Long, val value: String)
 
 data class PostParameterOrder(val parameterIds: List<Long>)
+
+data class CopyFromAvatar(val fromAvatarId: Long, val toAvatarId: Long)

@@ -1,6 +1,5 @@
 package chat.paramvr
 
-import java.nio.file.Files
 import java.nio.file.Paths
 
 class AppConfig : Config(Paths.get("vrcparameters-server.properties")) {
@@ -34,7 +33,7 @@ class AppConfig : Config(Paths.get("vrcparameters-server.properties")) {
 
     fun useSsl() = isProduction() && getBoolean(useSsl)
 
-    fun getOrigin() = if (isProduction()) "https://${getHost()}" else "http://localhost:${getOriginPort()}"
+    fun getOrigin() = if (isProduction()) getHost() else "localhost:${getOriginPort()}"
 
     fun getHost() = getString(host)
 

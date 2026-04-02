@@ -2,7 +2,6 @@ package chat.paramvr.auth
 
 import com.google.gson.JsonObject
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*

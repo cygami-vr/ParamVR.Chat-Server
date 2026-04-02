@@ -165,7 +165,7 @@ class ParameterDAO : DAO() {
                     parameterId = keys.getLong(1)
                 }
             }
-            if (param.values != null && param.values.isNotEmpty()) {
+            if (!param.values.isNullOrEmpty()) {
                 c.prepareStatement("insert into parameter_value(parameter_id, value) values (?, ?)").use {
                     param.values.forEach { v ->
                         it.setLong(1, parameterId!!)
@@ -322,6 +322,33 @@ class ParameterDAO : DAO() {
                     it.setString(2, lockedByClientId)
                     return it.executeUpdate() > 0
                 }
+            }
+        }
+    }
+
+    fun copyAvatarParameters(userId: Long, fromAvatarId: Long, toAvatarId: Long) {
+        connect().use { c ->
+            c.prepareStatement("insert into parameter(user_id, avatar_id, type, description, name, requires_invite, data_type, default_value, min_value, max_value, press_value, saved, lockable, `order`)" +
+                    " select user_id, ?, type, description, name, requires_invite, data_type, default_value, min_value, max_value, press_value, saved, lockable, `order`" +
+                    " from parameter where avatar_id = ? and user_id = ?").use {
+
+                it.setLong(1, toAvatarId)
+                it.setLong(2, fromAvatarId)
+                it.setLong(3, userId)
+                it.executeUpdate()
+            }
+            c.prepareStatement("insert into parameter_value(parameter_id, description, value, requires_invite)" +
+                    " select p.id, pv.description, pv.value, pv.requires_invite" +
+                    " from parameter p" +
+                    " join parameter_value pv" +
+                    " on parameter_id = (select id from parameter where name = p.name and avatar_id = ? and user_id = ?)" +
+                    " where avatar_id = ? and user_id = ?").use {
+
+                it.setLong(1, fromAvatarId)
+                it.setLong(2, userId)
+                it.setLong(3, toAvatarId)
+                it.setLong(4, userId)
+                it.executeUpdate()
             }
         }
     }
