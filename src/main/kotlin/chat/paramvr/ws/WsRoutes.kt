@@ -10,8 +10,8 @@ import io.ktor.server.routing.*
 import java.util.*
 
 data class TriggerHandshake(val target: String, val targetType: String, val clientId: String?)
-data class Trigger(val sessionId: String, val targetUser: String, val clientId: String, val allowMuteLock: Boolean)
-data class Invite(val id: Long, val targetUser: String, val allowMuteLock: Boolean)
+data class Trigger(val sessionId: String, val targetUser: String, val clientId: String, val allowMuteLock: Boolean, val allowAvatarLock: Boolean)
+data class Invite(val id: Long, val targetUser: String, val allowMuteLock: Boolean, val allowAvatarLock: Boolean)
 
 val dao = TriggerSessionDAO()
 
@@ -22,6 +22,7 @@ fun Route.wsRoutes() {
         val targetUser: String
         var inviteId: Long? = null
         var allowMuteLock = false
+        var allowAvatarLock = false
 
         when (body.targetType) {
             "invite" -> {
@@ -33,6 +34,7 @@ fun Route.wsRoutes() {
                 targetUser = invite.targetUser
                 inviteId = invite.id
                 allowMuteLock = invite.allowMuteLock
+                allowAvatarLock = invite.allowMuteLock
             }
             "user" -> {
                 val id = dao.getTargetUserId(body.target)
@@ -59,6 +61,6 @@ fun Route.wsRoutes() {
         }
 
         val uuid = dao.insertTriggerSession(clientId, targetUser, inviteId)
-        call.respond(Trigger(uuid, targetUser, clientId, allowMuteLock))
+        call.respond(Trigger(uuid, targetUser, clientId, allowMuteLock, allowAvatarLock))
     }
 }

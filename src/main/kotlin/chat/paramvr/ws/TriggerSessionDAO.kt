@@ -37,12 +37,12 @@ class TriggerSessionDAO : DAO() {
 
     fun getInvite(url: String): Invite? {
         connect().use { c ->
-            c.prepareStatement("select invite.id, name, allow_mute_lock from user" +
+            c.prepareStatement("select invite.id, name, allow_mute_lock, allow_avatar_lock from user" +
                     " join invite on user.id = user_id and url = ?").use {
                 it.setString(1, url)
                 val rs = it.executeQuery()
                 return if (rs.next()) Invite(rs.getLong(1),
-                    rs.getString(2), rs.getString(3) == "Y") else null
+                    rs.getString(2), rs.getString(3) == "Y", rs.getString(4) == "Y") else null
             }
         }
     }

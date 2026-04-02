@@ -24,6 +24,7 @@ class ListenConnection(
     var changeableAvatars: List<Avatar>? = null,
     var lastAvatarChange: Long = -1,
     var muteLockedByClientId: String? = null,
+    var avatarLockedByClientId: String? = null,
 
     // Mutated params cannot be tracked as part of avatar params
     // because we need the mutated list to persist even when avatar params is overwritten.
@@ -133,6 +134,7 @@ class ListenConnection(
                 it.sendLockedParams()
                 it.sendChangeableAvatars()
                 it.sendMuteLockStatus()
+                it.sendAvatarLockStatus()
             }
         }
     }
