@@ -124,6 +124,28 @@ class TriggerConnection(
         }
     }
 
+    suspend fun avatarLock(avatarLock: Boolean) {
+
+        listener("validate avatar lock")?.let { listener ->
+
+            val allowAvatarLock = listener.invites.findId(getInviteId())?.allowAvatarLock ?: false
+            val lockAvailable = listener.avatarLockedByClientId == null || getClientId() == listener.avatarLockedByClientId
+
+            log("Checking avatar lock perms. Allowed = ${allowAvatarLock}," +
+                    " Invite ID = ${getInviteId()}," +
+                    " Locked by = ${listener.avatarLockedByClientId}," +
+                    " Client ID = ${getClientId()}")
+
+            if (allowAvatarLock && lockAvailable) {
+                listener.avatarLockedByClientId = if (avatarLock) getClientId() else null
+                listener.sendSerialized(ParameterChangeWrapped(ParameterChange("chat-paramvr-avatarlock", if (avatarLock) "true" else "false", 0)))
+                connections.target(targetUser).forEach {
+                    it.sendAvatarLockStatus()
+                }
+            }
+        }
+    }
+
     private suspend fun propagateLock(param: Parameter, lock: ParameterLock) {
         connections.target(targetUser).forEach { triggerCon ->
             if (triggerCon.perms.canView(param)) {
@@ -246,6 +268,14 @@ class TriggerConnection(
                 sendStatus("muteLocked", listener.muteLockedByClientId != null)
                 sendStatus("muteLockedByOther", listener.muteLockedByClientId != null && listener.muteLockedByClientId != getClientId())
             }
+        }
+    }
+
+    suspend fun sendAvatarLockStatus() {
+        listener("send avatar lock status") { listener ->
+            // All trigger connections must know avatar lock status to properly disable the avatar changer.
+            sendStatus("avatarLocked", listener.avatarLockedByClientId != null)
+            sendStatus("avatarLockedByOther", listener.avatarLockedByClientId != null && listener.avatarLockedByClientId != getClientId())
         }
     }
 

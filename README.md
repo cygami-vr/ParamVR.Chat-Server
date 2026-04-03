@@ -67,7 +67,7 @@ create table parameter(
     press_value varchar(16),
     `order` tinyint,
     unique key (user_id, avatar_id, name),
-    foreign key (user_id) references user(id) on delete cascade,
+    foreign key (user_id) references user(id) on delete restrict,
     foreign key (avatar_id) references avatar(id) on delete restrict
 );
 
@@ -77,6 +77,7 @@ create table invite(
     user_id bigint not null,
     expires bigint,
     allow_mute_lock char(1) default 'N',
+    allow_avatar_lock char(1) default 'N',
     unique key (url),
     foreign key (user_id) references user(id) on delete cascade
 );
