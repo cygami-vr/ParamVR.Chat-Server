@@ -1,16 +1,5 @@
 package chat.paramvr
 
-import io.ktor.serialization.gson.*
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.engine.*
-import io.ktor.server.http.content.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
-import io.ktor.server.websocket.*
 import chat.paramvr.auth.*
 import chat.paramvr.avatar.avatarRoutes
 import chat.paramvr.avatar.basicAvatarRoutes
@@ -21,14 +10,22 @@ import chat.paramvr.usersettings.userSettingsRoutes
 import chat.paramvr.ws.Sockets.vrcParameterSockets
 import chat.paramvr.ws.TriggerSessionDAO
 import chat.paramvr.ws.wsRoutes
-import io.ktor.http.CacheControl
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.ktor.http.content.CachingOptions
+import io.ktor.serialization.gson.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
+import io.ktor.server.netty.*
 import io.ktor.server.plugins.cachingheaders.CachingHeaders
+import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
+import io.ktor.server.websocket.*
 import java.io.File
 import kotlin.time.Duration.Companion.minutes
 
@@ -97,7 +94,7 @@ fun Application.module() {
 
     if (!conf.isProduction()) {
         install(CORS) {
-            allowHost(origin, listOf(if (conf.isProduction()) "https" else "http"))
+            allowHost(origin, listOf("http"))
             allowCredentials = true
             allowHeader(HttpHeaders.ContentType)
             allowMethod(HttpMethod.Options)

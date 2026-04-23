@@ -4,7 +4,6 @@ import chat.paramvr.log
 import chat.paramvr.tryPost
 import chat.paramvr.ws.Sockets.sessionDAO
 import io.ktor.http.*
-import io.ktor.server.application.log
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -35,7 +34,7 @@ fun Route.wsRoutes() {
                 targetUser = invite.targetUser
                 inviteId = invite.id
                 allowMuteLock = invite.allowMuteLock
-                allowAvatarLock = invite.allowMuteLock
+                allowAvatarLock = invite.allowAvatarLock
             }
             "user" -> {
                 val id = dao.getTargetUserId(body.target)
