@@ -2,79 +2,96 @@ package chat.paramvr.admin
 
 import chat.paramvr.Crypto
 
-object Admin {
-    private val adminDAO = AdminDAO()
+private val adminDAO = AdminDAO()
 
-    @JvmStatic
-    fun main(args: Array<String>) {
-        if (args.isEmpty()) {
-            println("Missing action argument (user)")
-            return
-        }
-        when (args[0].lowercase()) {
-            "user" -> {
-                if (args.size < 2) {
-                    println("Missing user sub-action argument (create, enable, disable, recover)")
-                    return
+fun main(args: Array<String>) {
+    if (args.isEmpty()) {
+        println("Missing action argument (user)")
+        return
+    }
+    when (args[0].lowercase()) {
+        "user" -> {
+            if (args.size < 2) {
+                println("Missing user sub-action argument (create, enable, disable, recover, rename)")
+                return
+            }
+            when (args[1].lowercase()) {
+                "create" -> {
+                    createUser(args)
                 }
-                when (args[1].lowercase()) {
-                    "create" -> {
-                        createUser(args)
-                    }
-                    "enable" -> {
-                        disenableUser(args, true)
-                    }
-                    "disable" -> {
-                        disenableUser(args, false)
-                    }
-                    "recover" -> {
-                        recoverUser(args)
-                    }
-                    else -> {
-                        println("Unknown user sub-action argument ${args[1]}")
-                    }
+                "enable" -> {
+                    disenableUser(args, true)
+                }
+                "disable" -> {
+                    disenableUser(args, false)
+                }
+                "recover" -> {
+                    recoverUser(args)
+                }
+                "rename" -> {
+                    renameUser(args)
+                }
+                else -> {
+                    println("Unknown user sub-action argument ${args[1]}")
                 }
             }
-            else -> {
-                println("Unknown action argument ${args[0]}")
-            }
+        }
+        else -> {
+            println("Unknown action argument ${args[0]}")
         }
     }
+}
 
-    private fun createUser(args: Array<String>) {
-        if (args.size < 4) {
-            println("Missing create user arguments (UserName, Password)")
-            return
-        }
-        val userName = args[2]
-        val password = args[3]
+private fun createUser(args: Array<String>) {
+    if (args.size < 4) {
+        println("Missing create user arguments (UserName, Password)")
+        return
+    }
+    val userName = args[2]
+    val password = args[3]
 
-        val salt = Crypto.nextSalt(32)
-        val hash = Crypto.hash(password.toCharArray(), salt)
-        adminDAO.createUser(userName, salt, hash)
+    if (userName != userName.lowercase()) {
+        println("Uppercase letters in username not allowed.")
+        return
     }
 
-    private fun disenableUser(args: Array<String>, enable: Boolean) {
-        if (args.size < 3) {
-            println("Missing dis/enable user arguments (UserName)")
-            return
-        }
+    val salt = Crypto.nextSalt(32)
+    val hash = Crypto.hash(password.toCharArray(), salt)
+    adminDAO.createUser(userName, salt, hash)
+}
 
-        val userName = args[2]
-        adminDAO.updateUserFailedLogins(userName, if (enable) 0 else 127)
+private fun disenableUser(args: Array<String>, enable: Boolean) {
+    if (args.size < 3) {
+        println("Missing dis/enable user arguments (UserName)")
+        return
     }
 
-    private fun recoverUser(args: Array<String>) {
-        if (args.size < 4) {
-            println("Missing recover user arguments (UserName, Password)")
-            return
-        }
-        val userName = args[2]
-        val password = args[3]
+    val userName = args[2]
+    adminDAO.updateUserFailedLogins(userName, if (enable) 0 else 127)
+}
 
-        val salt = Crypto.nextSalt(32)
-        val hash = Crypto.hash(password.toCharArray(), salt)
-
-        adminDAO.updateUserCredentials(userName, salt, hash)
+private fun recoverUser(args: Array<String>) {
+    if (args.size < 4) {
+        println("Missing recover user arguments (UserName, Password)")
+        return
     }
+    val userName = args[2]
+    val password = args[3]
+
+    val salt = Crypto.nextSalt(32)
+    val hash = Crypto.hash(password.toCharArray(), salt)
+
+    adminDAO.updateUserCredentials(userName, salt, hash)
+}
+
+private fun renameUser(args: Array<String>) {
+    if (args.size < 4) {
+        println("Missing rename user arguments (From, To)")
+        return
+    }
+
+    val from = args[2]
+    val to = args[3]
+
+    adminDAO.renameUser(from, to)
 }

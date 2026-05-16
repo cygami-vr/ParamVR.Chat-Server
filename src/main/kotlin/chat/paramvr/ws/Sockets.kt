@@ -14,11 +14,12 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.util.*
 
-data class TriggerMessage(val lock: ParameterLock?, val change: ParameterChange?, val vrcUuid: String?)
+data class TriggerMessage(val lock: ParameterLock?, val change: ParameterChange?, val vrcUuid: String?, val eyeHeight: Float?)
 data class ParameterLock(val name: String, val locked: Boolean)
 data class ParameterChange(val name: String, val value: String, val dataType: Short)
 data class ParameterChangeWrapped(val parameter: ParameterChange)
 data class AvatarChange(val vrcUuid: String)
+data class EyeHeightChange(val eyeHeight: Float)
 data class Parameters(val parameters: List<Parameter>)
 
 object Sockets {
@@ -172,6 +173,9 @@ object Sockets {
             } else if (msg.vrcUuid != null) {
                 debug("${con.targetUser} ?: Received AvatarChange to ${msg.vrcUuid}")
                 con.changeAvatar(msg.vrcUuid)
+            } else if (msg.eyeHeight != null) {
+                debug("${con.targetUser} ?: Received EyeHeightChange to ${msg.eyeHeight}")
+                con.changeEyeHeight(msg.eyeHeight)
             } else {
                 warn("${con.targetUser} : TriggerMessage is empty")
             }

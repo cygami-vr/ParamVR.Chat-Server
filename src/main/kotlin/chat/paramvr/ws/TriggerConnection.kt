@@ -188,6 +188,19 @@ class TriggerConnection(
         }
     }
 
+    suspend fun changeEyeHeight(eyeHeight: Float) {
+        listener("change eye height") { listener ->
+
+            val canChange = perms.canChangeEyeHeight()
+
+            log("Attempting to change eye height to $eyeHeight, can change = $canChange")
+
+            if (canChange) {
+                listener.sendSerialized(EyeHeightChange(eyeHeight))
+            }
+        }
+    }
+
     suspend fun sendFullStatus() {
         listener("send full status") {
             sendSerialized(it.getFullStatus())

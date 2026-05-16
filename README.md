@@ -13,6 +13,8 @@ create table user(
 create table user_settings(
     user_id bigint primary key,
     avatar_change_cooldown smallint default 60,
+    min_eye_height decimal(7, 2) default 0.20,
+    max_eye_height decimal(7, 2) default 5.00,
     color_primary char(6),
     color_secondary char(6),
     dark_mode_color_primary char(6),
@@ -78,6 +80,7 @@ create table invite(
     expires bigint,
     allow_mute_lock char(1) default 'N',
     allow_avatar_lock char(1) default 'N',
+    allow_eye_height_change char(1) default 'N',
     unique key (url),
     foreign key (user_id) references user(id) on delete cascade
 );

@@ -2,6 +2,7 @@ package chat.paramvr.ws
 
 import chat.paramvr.avatar.Avatar
 import chat.paramvr.invite.validForAvatarChange
+import chat.paramvr.invite.validForEyeHeightChange
 import chat.paramvr.invite.validForParameter
 
 class ValidationResult(val valid: Boolean,
@@ -117,4 +118,6 @@ class PermissionValidator(private val trigger: TriggerConnection) {
         }
         return false
     }
+
+    fun canChangeEyeHeight() = trigger.getListener()?.invites?.validForEyeHeightChange(trigger.getInviteId()) == true
 }

@@ -1,11 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     application
     kotlin("jvm") version "2.3.20"
     kotlin("plugin.serialization") version "2.3.20"
-    id("com.gradleup.shadow") version "9.4.1"
 }
 
 group = "chat.paramvr"
@@ -34,6 +32,7 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:${ktorVersion}")
     implementation("io.ktor:ktor-server-caching-headers:${ktorVersion}")
     implementation("ch.qos.logback:logback-classic:1.5.32")
+    implementation("org.slf4j:slf4j-api:2.0.17")
 }
 
 tasks.test {
@@ -44,8 +43,4 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
-}
-
-tasks.withType<ShadowJar> {
-    archiveFileName.set("vrcparameters-server.jar")
 }

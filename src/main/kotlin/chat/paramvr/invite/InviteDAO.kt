@@ -10,7 +10,7 @@ class InviteDAO: DAO() {
         val invites = mutableListOf<Invite>()
 
         connect().use { c ->
-            c.prepareStatement("select id, url, expires, allow_mute_lock, allow_avatar_lock from invite where user_id = ?").use {
+            c.prepareStatement("select id, url, expires, allow_mute_lock, allow_avatar_lock, allow_eye_height_change from invite where user_id = ?").use {
 
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
@@ -20,7 +20,8 @@ class InviteDAO: DAO() {
                     val expires = rs.getLong(3)
                     val allowMuteLock = rs.getString(4) == "Y"
                     val allowAvatarLock = rs.getString(5) == "Y"
-                    invites.add(Invite(id, url, expires, allowMuteLock, allowAvatarLock))
+                    val allowEyeHeightChange = rs.getString(6) == "Y"
+                    invites.add(Invite(id, url, expires, allowMuteLock, allowAvatarLock, allowEyeHeightChange))
                 }
             }
 
@@ -58,7 +59,7 @@ class InviteDAO: DAO() {
         val invites = mutableListOf<GetInvite>()
 
         connect().use { c ->
-            c.prepareStatement("select id, url, expires, allow_mute_lock, allow_avatar_lock from invite where user_id = ?").use {
+            c.prepareStatement("select id, url, expires, allow_mute_lock, allow_avatar_lock, allow_eye_height_change from invite where user_id = ?").use {
 
                 it.setLong(1, userId)
                 val rs = it.executeQuery()
@@ -68,7 +69,8 @@ class InviteDAO: DAO() {
                     val expires = rs.getLong(3)
                     val allowMuteLock = rs.getString(4) == "Y"
                     val allowAvatarLock = rs.getString(5) == "Y"
-                    invites.add(GetInvite(id, url, expires, allowMuteLock, allowAvatarLock))
+                    val allowEyeHeightChange = rs.getString(6) == "Y"
+                    invites.add(GetInvite(id, url, expires, allowMuteLock, allowAvatarLock, allowEyeHeightChange))
                 }
             }
 
@@ -118,7 +120,8 @@ class InviteDAO: DAO() {
         val inviteId: Long
 
         connect().use { c ->
-            c.prepareStatement("insert into invite(url, user_id, expires) values (?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS).use {
+            c.prepareStatement("insert into invite(url, user_id, expires) values (?, ?, ?)",
+                PreparedStatement.RETURN_GENERATED_KEYS).use {
                 it.setString(1, urlBuilder.toString())
                 it.setLong(2, userId)
                 it.setLong(3, invite.expires)
@@ -142,10 +145,11 @@ class InviteDAO: DAO() {
                 rs.next()
                 inviteId = rs.getLong(1)
             }
-            c.prepareStatement("update invite set allow_mute_lock = ?, allow_avatar_lock = ? where id = ?").use {
+            c.prepareStatement("update invite set allow_mute_lock = ?, allow_avatar_lock = ?, allow_eye_height_change = ? where id = ?").use {
                 it.setString(1, if (invite.allowMuteLock) "Y" else "N")
                 it.setString(2, if (invite.allowAvatarLock) "Y" else "N")
-                it.setLong(3, inviteId)
+                it.setString(3, if (invite.allowEyeHeightChange) "Y" else "N")
+                it.setLong(4, inviteId)
                 it.executeUpdate()
             }
             c.prepareStatement("delete from invite_permission where invite_id = ?").use {

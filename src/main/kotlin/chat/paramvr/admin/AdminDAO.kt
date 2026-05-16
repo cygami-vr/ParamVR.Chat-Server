@@ -45,4 +45,14 @@ class AdminDAO : DAO() {
             }
         }
     }
+
+    fun renameUser(from: String, to: String) {
+        connect().use { c ->
+            c.prepareStatement("update user set name = ? where name = ?").use {
+                it.setString(1, to)
+                it.setString(2, from)
+                it.executeUpdate()
+            }
+        }
+    }
 }

@@ -19,7 +19,7 @@ class ListenConnection(
     session: DefaultWebSocketServerSession, targetUser: String, val userId: Long, var invites: List<Invite>,
     var avatar: Avatar? = null, var muted: Boolean? = null, var isPancake: Boolean? = null,
     var afk: Boolean? = null, private var lastActivity: Long = -1, var vrcOpen: Boolean? = null,
-    var lastActivityPing: Long = -1, var settings: UserSettings? = null,
+    var lastActivityPing: Long = -1, var settings: UserSettings? = null, var eyeHeight: Float = 1f,
 
     var changeableAvatars: List<Avatar>? = null,
     var lastAvatarChange: Long = -1,
@@ -198,7 +198,10 @@ class ListenConnection(
         avatarStatus.addProperty("title", avatar?.title)
         status.add("avatar", avatarStatus)
         status.addProperty("isPancake", isPancake)
+        status.addProperty("eyeHeight", eyeHeight)
         settings?.let {
+            status.addProperty("minEyeHeight", it.minEyeHeight)
+            status.addProperty("maxEyeHeight", it.maxEyeHeight)
             status.addProperty("avatarChangeCooldown",
                 it.avatarChangeCooldown * 1000 - (System.currentTimeMillis() - lastAvatarChange))
             val colors = JsonObject()
@@ -260,6 +263,10 @@ class ListenConnection(
         when (name) {
             "/avatar/change" -> {
                 // ignore, this was handled by the caller
+            }
+            "/avatar/eyeheight" -> {
+                eyeHeight = value.asFloat
+                sendStatusParameter("eyeHeight", eyeHeight)
             }
             "/avatar/parameters/MuteSelf" -> {
                 muted = value.asBoolean

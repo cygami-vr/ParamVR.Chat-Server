@@ -1,6 +1,7 @@
 package chat.paramvr.usersettings
 
-data class UserSettings(val avatarChangeCooldown: Int, val colorPrimary: String?, val colorSecondary: String?,
+data class UserSettings(val avatarChangeCooldown: Int, val minEyeHeight: Float, val maxEyeHeight: Float,
+                        val colorPrimary: String?, val colorSecondary: String?,
                         val darkModeColorPrimary: String?, val darkModeColorSecondary: String?)
 
 fun validateColor(color: String?): Boolean {
